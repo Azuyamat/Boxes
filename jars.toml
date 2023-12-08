@@ -1,0 +1,11 @@
+[[jars]]
+name = "Paper"
+download_url = "https://api.papermc.io/v2/projects/paper/versions/{version}/builds/{build}/downloads/paper-{version}-{build}.jar"
+
+[[jars]]
+name = "Velocity"
+download_url = "https://api.papermc.io/v2/projects/velocity/versions/{version}/builds/{build}/downloads/velocity-{version}-{build}.jar"
+
+[[jars]]
+name = "Waterfall"
+download_url = "https://api.papermc.io/v2/projects/waterfall/versions/{version}/builds/{build}/downloads/waterfall-{version}-{build}.jar"
