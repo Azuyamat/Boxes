@@ -1,12 +1,12 @@
 [package]
-name = "nerd"
+name = "boxes"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 thiserror = "1.0.50"
-reqwest = { version = "0.11.22", features = ["blocking"] }
+reqwest = { version = "0.11.22", features = ["blocking", "json"] }
 toml = "0.8.8"
 serde = { version = "1.0.193", features = ["derive"] }
 indicatif = "0.17.7"

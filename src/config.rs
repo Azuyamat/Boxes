@@ -1,4 +1,5 @@
 use serde::{Serialize, Deserialize};
+use crate::minecraft::jars;
 use crate::minecraft::server::Server;
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -10,9 +11,11 @@ impl Config {
     pub fn print_info(&self) {
         println!("🗃️ Config info:");
         println!("  💾 Servers:");
+        if self.servers.is_empty() { println!("      No servers!"); }
         for server in &self.servers {
-            println!("      ➥ 📦 {}", server.server_name);
+            println!("      ➥ 📦 {} ({})", server.server_name, server.location.display());
         }
+        jars::load_jars().unwrap().print_info();
     }
 
     pub fn load() -> Self {

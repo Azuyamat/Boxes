@@ -22,6 +22,9 @@ pub struct ServerInfo {
     pub jar_name: String,
     pub version: String,
     pub build: String,
+    pub gui: bool,
+    pub xms: Option<String>,
+    pub xmx: Option<String>,
 }
 
 impl ServerInfo {
@@ -31,11 +34,14 @@ impl ServerInfo {
             jar_name: server.jar_name.clone(),
             version: server.version.clone(),
             build: server.build.clone(),
+            gui: false,
+            xms: None,
+            xmx: None,
         }
     }
 
     pub fn from_path(path: &PathBuf) -> Self {
-        let server_info_toml = std::fs::read_to_string(path.parent().unwrap().join("server.toml")).unwrap();
+        let server_info_toml = std::fs::read_to_string(path.join("server.toml")).unwrap();
         toml::from_str(&server_info_toml).unwrap()
     }
 }
@@ -73,6 +79,7 @@ impl Server {
     }
 
     pub fn run(&self) {
+        let server_info = self.get_server_info();
         self.print_info();
         println!("🚀 Starting {} server...", self.jar_name);
 
@@ -84,14 +91,17 @@ impl Server {
         let jar_name = format!("{}-{}.jar", self.jar_name, self.version);
 
         // Run jar
-        let mut child = Command::new("java")
+        let mut process = Command::new("java")
+            .arg(format!("-Xms{}", server_info.xms.unwrap_or_else(|| "1G".to_string())))
+            .arg(format!("-Xmx{}", server_info.xmx.unwrap_or_else(|| "1G".to_string())))
             .arg("-jar")
             .arg(jar_name)
+            .arg(if !server_info.gui { "--nogui" } else { "" })
             .stdout(Stdio::piped())
             .spawn()
-            .expect("Failed to run server");
+            .expect("Failed to start child");
 
-        if let Some(ref mut stdout) = child.stdout {
+        if let Some(ref mut stdout) = process.stdout {
             let reader = BufReader::new(stdout);
 
             for line in reader.lines() {
@@ -101,7 +111,7 @@ impl Server {
                     let input = read_line!();
                     if input == "y" {
                         println!("🛑 Stopping server");
-                        child.kill().expect("Failed to kill child");
+                        process.kill().expect("Failed to kill child");
                         self.accept_eula();
                         let server_clone = self.clone();
                         let server_copy = thread::spawn(move || {
@@ -118,7 +128,7 @@ impl Server {
             }
         }
 
-        child.wait().expect("Failed to wait on child");
+        process.wait().expect("Failed to wait on child");
     }
 
     pub fn accept_eula(&self) {
@@ -134,6 +144,10 @@ impl Server {
         println!("📝 Accepted EULA!");
     }
 
+    pub fn get_server_info(&self) -> ServerInfo {
+        ServerInfo::from_path(&self.location)
+    }
+
     pub fn from_path(path: &str) -> Self {
         let path = PathBuf::from(path);
         let server_info = ServerInfo::from_path(&path);
@@ -145,5 +159,42 @@ impl Server {
             build: server_info.build,
             location: path,
         }
+    }
+
+    pub fn delete(&self) {
+        println!("📝 Deleting server...");
+        std::fs::remove_dir_all(&self.location).expect("🚨 Failed to delete server!");
+        println!("📝 Deleted server!");
+    }
+
+    pub fn plugins(&self) -> Vec<String> {
+        let dir = self.location.join("plugins");
+        if !dir.exists() {
+            println!("🚨 Plugins directory not found!");
+            return Vec::new();
+        }
+        dir.read_dir().unwrap().filter_map(|entry| {
+            let name = entry.unwrap().file_name().into_string().unwrap();
+            if name.ends_with(".jar") {
+                Some(name)
+            } else {
+                None
+            }
+        }).collect()
+    }
+
+    pub fn remove_plugin(&self, plugin: &str) {
+        let dir = self.location.join("plugins");
+        if !dir.exists() {
+            println!("🚨 Plugins directory not found!");
+            return;
+        }
+        let path = dir.join(plugin);
+        if !path.exists() {
+            println!("🚨 Plugin not found!");
+            return;
+        }
+        std::fs::remove_file(path).unwrap();
+        println!("📝 Removed plugin!");
     }
 }

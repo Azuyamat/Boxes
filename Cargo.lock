@@ -157,6 +157,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "boxes"
+version = "0.1.0"
+dependencies = [
+ "blocking",
+ "clap",
+ "confy",
+ "indicatif",
+ "reqwest",
+ "serde",
+ "thiserror",
+ "toml 0.8.8",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -725,20 +739,6 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "tempfile",
-]
-
-[[package]]
-name = "nerd"
-version = "0.1.0"
-dependencies = [
- "blocking",
- "clap",
- "confy",
- "indicatif",
- "reqwest",
- "serde",
- "thiserror",
- "toml 0.8.8",
 ]
 
 [[package]]
