@@ -1,14 +1,17 @@
 [[jars]]
 name = "Paper"
 download_url = "https://api.papermc.io/v2/projects/paper/versions/{version}/builds/{build}/downloads/paper-{version}-{build}.jar"
-info_url = "https://api.papermc.io/v2/projects/paper/versions/{version}/"
+builds_url = "https://api.papermc.io/v2/projects/paper/versions/{version}/"
+versions_url = "https://api.papermc.io/v2/projects/paper"
 
 [[jars]]
 name = "Velocity"
 download_url = "https://api.papermc.io/v2/projects/velocity/versions/{version}/builds/{build}/downloads/velocity-{version}-{build}.jar"
-info_url = "https://api.papermc.io/v2/projects/velocity/versions/{version}/"
+builds_url = "https://api.papermc.io/v2/projects/velocity/versions/{version}/"
+versions_url = "https://api.papermc.io/v2/projects/velocity"
 
 [[jars]]
 name = "Waterfall"
 download_url = "https://api.papermc.io/v2/projects/waterfall/versions/{version}/builds/{build}/downloads/waterfall-{version}-{build}.jar"
-info_url = "https://api.papermc.io/v2/projects/waterfall/versions/{version}/"
+builds_url = "https://api.papermc.io/v2/projects/waterfall/versions/{version}/"
+versions_url = "https://api.papermc.io/v2/projects/waterfall"

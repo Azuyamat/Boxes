@@ -1,3 +1,7 @@
+use std::fs::File;
+use std::io::{Write};
+use reqwest::blocking::Response;
+
 pub enum Color {
     Black,
     DarkBlue,
@@ -47,6 +51,21 @@ pub fn colorize(string: &str, color: Color) -> String {
     format!("{}{}{}", color.to_str(), string, Color::Reset.to_str())
 }
 
+pub fn download(bytes: Response, file: &mut File) {
+    println!("🗂️ Preparing to download...");
+    let bytes = bytes.bytes().expect("😧 Failed to get bytes (Check your internet connection)");
+    let max = bytes.len();
+    let chunks = bytes.chunks(4096);
+    let mut current = 0;
+    for chunk in chunks {
+        current += chunk.len();
+        let percent = (current as f32 / max as f32) * 100.0;
+        print!("\r🗂️ Downloading... {:.2}%", percent);
+        file.write(&chunk).expect("😧 Failed to write to file");
+    }
+    println!(""); // New line (fix for download progress)
+}
+
 #[macro_export]
 macro_rules! get_exec_time {
     ($func:expr) => {{
@@ -59,9 +78,8 @@ macro_rules! get_exec_time {
 
 #[macro_export]
 macro_rules! read_line {
-    () => {{
-        let mut input = String::new();
-        std::io::stdin().read_line(&mut input).unwrap();
-        input.trim().to_string()
+    ($($arg:tt)*) => {{
+        let text: String = inquire::Text::new($($arg)*).prompt().expect("😧 Failed to read line");
+        text
     }};
 }

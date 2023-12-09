@@ -6,6 +6,9 @@ use serde::{Deserialize, Serialize};
 use crate::read_line;
 use crate::utils::*;
 
+/*
+This is the integration for actual servers.
+ */
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Server {
     pub server_name: String,
@@ -16,6 +19,9 @@ pub struct Server {
     pub location: PathBuf,
 }
 
+/*
+This is the integration for server info (i.e. server.toml)
+ */
 #[derive(Deserialize, Serialize)]
 pub struct ServerInfo {
     pub server_name: String,
@@ -41,8 +47,63 @@ impl ServerInfo {
     }
 
     pub fn from_path(path: &PathBuf) -> Self {
-        let server_info_toml = std::fs::read_to_string(path.join("server.toml")).unwrap();
-        toml::from_str(&server_info_toml).unwrap()
+        if !path.exists() { panic!("🚨 Jar file not found!"); }
+        let server_name = path.file_name().unwrap().to_str().unwrap().to_string();
+        let jar_name = path.read_dir().unwrap().filter_map(|entry| {
+            let name = entry.unwrap().file_name().into_string().unwrap();
+            if name.ends_with(".jar") {
+                Some(name)
+            } else {
+                None
+            }
+        }).next().expect("🚨 Jar file not found!");
+
+        let server_info: ServerInfo;
+        let server_info_file = path.join("server.toml");
+        if !server_info_file.exists() {
+            println!("🚨 server.toml not found! Creating...");
+            server_info = Self {
+                server_name: server_name.clone(),
+                jar_name: jar_name.clone(),
+                version: "Unknown".to_string(),
+                build: "Unknown".to_string(),
+                gui: false,
+                xms: None,
+                xmx: None,
+            };
+            server_info.write(path.clone());
+            println!("📝 Created server.toml!");
+        } else {
+            let server_info_toml = std::fs::read_to_string(path.join("server.toml")).unwrap_or("".to_string());
+            server_info = toml::from_str(&server_info_toml).unwrap();
+        }
+
+        Self {
+            server_name: server_info.server_name,
+            jar_name: server_info.jar_name,
+            version: server_info.version,
+            build: server_info.build,
+            gui: server_info.gui,
+            xms: server_info.xms,
+            xmx: server_info.xmx,
+        }
+    }
+
+    pub fn to_server(&self, location: String) -> Server {
+        let location = PathBuf::from(location);
+        Server {
+            server_name: self.server_name.clone(),
+            jar_name: self.jar_name.clone(),
+            version: self.version.clone(),
+            build: self.build.clone(),
+            location,
+        }
+    }
+
+    pub fn write(&self, path_buf: PathBuf) {
+        let server_info_toml = toml::to_string(self).unwrap();
+        let server_location = path_buf.join("server.toml");
+        std::fs::write(server_location, server_info_toml).unwrap();
     }
 }
 
@@ -57,10 +118,7 @@ impl Server {
             location: location.clone(),
         };
         println!("📝 Saving server info...");
-        let server_info = ServerInfo::from_server(&server);
-        let server_info_toml = toml::to_string(&server_info).unwrap();
-        let server_location = location.join("server.toml");
-        std::fs::write(server_location, server_info_toml).unwrap();
+        ServerInfo::from_server(&server).write(location);
         println!("📝 Saved server info!");
         server
     }
@@ -107,8 +165,7 @@ impl Server {
             for line in reader.lines() {
                 let text = line.unwrap();
                 if text.contains("You need to agree to the EULA in order to run the server. Go to eula.txt for more info.") {
-                    println!("🚨 EULA not accepted! Would you like to accept? (y/n)");
-                    let input = read_line!();
+                    let input = read_line!("🚨 EULA not accepted! Would you like to accept? (y/n)");
                     if input == "y" {
                         println!("🛑 Stopping server");
                         process.kill().expect("Failed to kill child");
