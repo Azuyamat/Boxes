@@ -1,7 +1,7 @@
-use std::path::Path;
 use clap::{Parser, Subcommand};
 use inquire::Select;
 use crate::config::Config;
+use crate::config_cli::ConfigAction;
 use crate::error::Error;
 use crate::minecraft::jars::{load_jars};
 use crate::read_line;
@@ -40,11 +40,6 @@ pub enum DJ {
 }
 
 #[derive(Subcommand, Debug)]
-pub enum ConfigAction {
-    Info
-}
-
-#[derive(Subcommand, Debug)]
 pub enum ServerAction {
     List,
     Generate,
@@ -63,6 +58,10 @@ pub enum ServerAction {
     Plugins {
         name: String,
     },
+    AssignIP {
+        name: String,
+        ip: String,
+    }
 }
 
 // Actions
@@ -83,9 +82,7 @@ pub(crate) fn execute(args: Args, mut config: Config) -> Result<(), Error> {
             server.run();
         }
         DJ::Config { action } => {
-            match action {
-                ConfigAction::Info => { config.print_info(); }
-            }
+            crate::config_cli::manage_config_action(action, &config).expect("😧 Failed to manage config action");
         }
         DJ::Server { action } => {
             match action {
@@ -116,20 +113,19 @@ pub(crate) fn execute(args: Args, mut config: Config) -> Result<(), Error> {
                     config.add_server(&server);
                 }
                 ServerAction::Info { name } => {
-                    let server = config.get_server(&name).unwrap();
+                    let server = config.get_server(&name).expect("😧 Server not found");
                     server.print_info();
                 }
                 ServerAction::Start { name } => {
-                    let server = config.get_server(&name).unwrap();
+                    let server = config.get_server(&name).expect("😧 Server not found");
                     server.run();
                 }
                 ServerAction::Delete { name } => {
-                    let server = config.get_server(&name).unwrap();
+                    let server = config.get_server(&name).expect("😧 Server not found");
                     server.delete();
                 }
                 ServerAction::Add { location } => {
-                    let server_info = crate::minecraft::server::ServerInfo::from_path(&Path::new(&location).to_path_buf());
-                    let server = server_info.to_server(location);
+                    let server = crate::minecraft::server::Server::from_path(&location);
                     config.add_server(&server);
                 }
                 ServerAction::Plugins { name } => {
@@ -137,6 +133,15 @@ pub(crate) fn execute(args: Args, mut config: Config) -> Result<(), Error> {
                     for plugin in server.plugins() {
                         println!("{}", plugin);
                     }
+                }
+                ServerAction::AssignIP { name, ip } => {
+                    let server = config.get_server(&name).expect("😧 Server not found");
+                    let manipulator = crate::minecraft::server_manipulator::ServerManipulator { server: server.clone() };
+                    let mut properties = manipulator.get_server_properties();
+                    println!("📝 Assigning {}'s IP to {}...", name, ip);
+                    properties.insert("server-ip".to_string(), ip.clone());
+                    manipulator.save_server_properties(&properties);
+                    println!("📝 Assigned {}'s IP to {}!", name, ip);
                 }
             }
         }

@@ -1,6 +1,5 @@
 use std::fmt::{Display};
 use std::fs::File;
-use std::process::Command;
 use serde::Deserialize;
 use crate::error::Error;
 use crate::get_exec_time;
@@ -8,9 +7,10 @@ use crate::minecraft::server::Server;
 use crate::utils::colorize;
 use crate::utils::*;
 
+const JARS_TOML: &str = include_str!("../../jars.toml");
+
 pub fn load_jars() -> Result<JarManager, Error> {
-    let toml = std::fs::read_to_string("jars.toml")?;
-    let jars: JarManager = toml::from_str(&toml)?;
+    let jars: JarManager = toml::from_str(&JARS_TOML)?;
 
     Ok(jars)
 }
@@ -26,18 +26,10 @@ impl JarManager {
     }
 
     pub fn print_info(&self) {
-        let running_jars = Command::new("jps")
-            .output()
-            .expect("🚨 Failed to get running jars!");
-        let running_jars = String::from_utf8(running_jars.stdout).unwrap();
         println!("🗃️ Jar info:");
         println!("  💾 Jars:");
         if self.jars.is_empty() { println!("      No jars!"); }
         for jar in &self.jars {
-            if running_jars.contains(&jar.name) {
-                println!("      ➥ 📦 {} (Running)", colorize(&jar.name, Color::Green));
-                continue;
-            }
             println!("      ➥ 📦 {}", jar.name);
         }
     }

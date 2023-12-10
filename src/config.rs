@@ -1,6 +1,8 @@
+use std::process::Command;
 use serde::{Serialize, Deserialize};
 use crate::minecraft::jars;
 use crate::minecraft::server::Server;
+use crate::utils::{Color, colorize};
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Config {
@@ -12,14 +14,20 @@ impl Config {
         println!("🗃️ Config info:");
         println!("  💾 Servers:");
         if self.servers.is_empty() { println!("      No servers!"); }
+        let running_servers = Command::new("jps")
+            .arg("-v")
+            .output().unwrap();
+        let running_servers = String::from_utf8(running_servers.stdout).unwrap_or_default();
         for server in &self.servers {
-            println!("      ➥ 📦 {} ({})", server.server_name, server.location.display());
+            let running = running_servers.contains(format!("-Dname={}", server.server_name.trim()).as_str());
+            let running = if running { colorize("Running", Color::Green) } else { colorize("Stopped", Color::Red) };
+            println!("      ➥ 📦 {} ({}) ({})", server.server_name, server.location.display(), running);
         }
         jars::load_jars().unwrap().print_info();
     }
 
     pub fn load() -> Self {
-        let mut config: Self = confy::load("config", None).expect("🚨 Config file could not be loaded!");
+        let mut config: Self = confy::load("boxes", None).expect("🚨 Config file could not be loaded!");
         let mut changed = false;
         for server in config.clone().servers.iter() {
             if !server.location.exists() {
@@ -29,7 +37,7 @@ impl Config {
                 changed = true;
             }
         }
-        if changed { confy::store("config", None, config.clone()).expect("🚨 Config file could not be saved!"); }
+        if changed { confy::store("boxes", None, config.clone()).expect("🚨 Config file could not be saved!"); }
         config
     }
 
@@ -48,12 +56,25 @@ impl Config {
             println!("⚠️ A server was overridden!");
         }
         self.servers.push(server.clone());
-        confy::store("config", None, self).expect("🚨 Config file could not be saved!");
+        confy::store("boxes", None, self).expect("🚨 Config file could not be saved!");
         println!("📝 Added server to config!");
     }
 
     pub fn get_server(&self, server_name: &str) -> Option<&Server> {
         self.servers.iter().find(|s| s.server_name.to_lowercase() == server_name.to_lowercase())
+    }
+
+    pub fn get_server_mut(&mut self, server_name: &str) -> Option<&mut Server> {
+        self.servers.iter_mut().find(|s| s.server_name.to_lowercase() == server_name.to_lowercase())
+    }
+
+    pub fn save_server(&mut self, server: &Server) {
+        println!("📝 Saving server to config...");
+        let index = self.servers.iter().position(|s| s.server_name == server.server_name).unwrap();
+        self.servers.remove(index);
+        self.servers.push(server.clone());
+        confy::store("boxes", None, self).expect("🚨 Config file could not be saved!");
+        println!("📝 Saved server to config!");
     }
 }
 

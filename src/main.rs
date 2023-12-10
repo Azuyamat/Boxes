@@ -8,6 +8,7 @@ mod minecraft;
 mod utils;
 mod config;
 mod cli;
+mod config_cli;
 
 fn main() -> Result<(), error::Error> {
     let args = cli::Args::parse();
