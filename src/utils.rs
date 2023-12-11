@@ -61,9 +61,8 @@ pub fn download(bytes: Response, file: &mut File) {
         current += chunk.len();
         let percent = (current as f32 / max as f32) * 100.0;
         print!("\r🗂️ Downloading... {:.2}%", percent);
-        file.write(&chunk).expect("😧 Failed to write to file");
+        file.write_all(chunk).expect("😧 Failed to write to file");
     }
-    println!(""); // New line (fix for download progress)
 }
 
 #[macro_export]

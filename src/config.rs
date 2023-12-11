@@ -1,12 +1,28 @@
+use std::path::PathBuf;
 use std::process::Command;
 use serde::{Serialize, Deserialize};
 use crate::minecraft::jars;
 use crate::minecraft::server::Server;
 use crate::utils::{Color, colorize};
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Default)]
 pub struct Config {
-    pub servers: Vec<Server>,
+    pub servers: Vec<ServerInfo>,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+pub struct ServerInfo {
+    pub server_name: String,
+    pub location: PathBuf,
+}
+
+impl ServerInfo {
+    pub fn from_server(server: &Server) -> Self {
+        Self {
+            server_name: server.server_name.clone(),
+            location: server.location.clone(),
+        }
+    }
 }
 
 impl Config {
@@ -55,33 +71,25 @@ impl Config {
             self.servers.remove(self.servers.iter().position(|s| s.location == server.location).unwrap());
             println!("⚠️ A server was overridden!");
         }
-        self.servers.push(server.clone());
+        let server_info = ServerInfo::from_server(server);
+        self.servers.push(server_info);
         confy::store("boxes", None, self).expect("🚨 Config file could not be saved!");
         println!("📝 Added server to config!");
     }
 
-    pub fn get_server(&self, server_name: &str) -> Option<&Server> {
-        self.servers.iter().find(|s| s.server_name.to_lowercase() == server_name.to_lowercase())
-    }
-
-    pub fn get_server_mut(&mut self, server_name: &str) -> Option<&mut Server> {
-        self.servers.iter_mut().find(|s| s.server_name.to_lowercase() == server_name.to_lowercase())
+    pub fn get_server(&self, server_name: &str) -> Option<Server> {
+        let server_info = self.servers.iter().find(|s| s.server_name.to_lowercase() == server_name.to_lowercase());
+        server_info?;
+        Some(Server::from_path(server_info.unwrap().location.to_str().unwrap()))
     }
 
     pub fn save_server(&mut self, server: &Server) {
         println!("📝 Saving server to config...");
         let index = self.servers.iter().position(|s| s.server_name == server.server_name).unwrap();
         self.servers.remove(index);
-        self.servers.push(server.clone());
+        let server_info = ServerInfo::from_server(server);
+        self.servers.push(server_info);
         confy::store("boxes", None, self).expect("🚨 Config file could not be saved!");
         println!("📝 Saved server to config!");
-    }
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            servers: vec![],
-        }
     }
 }

@@ -69,7 +69,7 @@ impl Server {
         println!("🚀 Starting {} server...", self.jar_name);
 
         let jar_dir = &self.location;
-        env::set_current_dir(&jar_dir).expect("Failed to change directory");
+        env::set_current_dir(jar_dir).expect("Failed to change directory");
 
         println!("📂 Changed directory to {}", jar_dir.to_str().unwrap());
         // Find jar in dir
@@ -146,11 +146,11 @@ impl Server {
             }
             let jars = jars::load_jars().unwrap();
             let jar_name = Select::new("🎚️ Please enter the server Jar", jars.jars.iter().map(|j| j.name.as_str()).collect::<Vec<&str>>()).prompt().expect("😧 Failed to get jar name");
-            let jar = jars.get_jar(&jar_name).expect("😧 Jar not found");
+            let jar = jars.get_jar(jar_name).expect("😧 Jar not found");
             let version = Select::new("🎚️ Please enter the server version", jar.get_versions().unwrap()).prompt().expect("😧 Failed to get jar name");
             let builds = jar.get_builds(&version).unwrap();
             let latest = builds.first().unwrap();
-            let build = Select::new(&*format!("🎚️ Please enter the jar build ({} is latest)", latest), builds).prompt().expect("😧 Failed to get jar build").to_string();
+            let build = Select::new(&format!("🎚️ Please enter the jar build ({} is latest)", latest), builds).prompt().expect("😧 Failed to get jar build").to_string();
             let server = Server::new(
                 &server_name,
                 jar_name.to_string(),

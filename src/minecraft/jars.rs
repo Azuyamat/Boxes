@@ -1,4 +1,4 @@
-use std::fmt::{Display};
+use std::fmt::Display;
 use std::fs::File;
 use serde::Deserialize;
 use crate::error::Error;
@@ -10,7 +10,7 @@ use crate::utils::*;
 const JARS_TOML: &str = include_str!("../../jars.toml");
 
 pub fn load_jars() -> Result<JarManager, Error> {
-    let jars: JarManager = toml::from_str(&JARS_TOML)?;
+    let jars: JarManager = toml::from_str(JARS_TOML)?;
 
     Ok(jars)
 }
@@ -74,28 +74,28 @@ impl Jar {
         Ok(self.get_builds(&version).unwrap().first().unwrap().to_string())
     }
 
-    pub fn get_builds(&self, version: &String) -> Result<Vec<u32>, Error> {
+    pub fn get_builds(&self, version: &str) -> Result<Vec<u32>, Error> {
         let url = self.builds_url.clone()
-            .replace("{version}", version.as_str());
-        let response = reqwest::blocking::get(&url)?;
+            .replace("{version}", version);
+        let response = reqwest::blocking::get(url)?;
         let mut body: JarBuildInfo = response.json()?;
         body.builds.reverse();
         Ok(body.builds)
     }
 
     pub fn download(&self, version: &str, build: &str, server_name: &str, location: String) -> Result<Server, Error> {
-        println!("🗂️ Downloading {}...", colorize(&self.name, Color::Green));
+        println!("🗂️  Downloading {}...", colorize(&self.name, Color::Green));
         let server: Server;
         let exec_time = get_exec_time!({
             let download_url = self.download_url.clone()
                 .replace("{version}", version)
                 .replace("{build}", build);
-            println!("🗂️ Downloading from {}...", colorize(&download_url, Color::LightPurple));
+            println!("🗂️  Downloading from {}...", colorize(&download_url, Color::LightPurple));
             let response = reqwest::blocking::get(&download_url)?;
 
-            let path = std::path::Path::new(&location).join(format!("{0}", server_name));
+            let path = std::path::Path::new(&location).join(server_name);
             if !path.exists() { std::fs::create_dir_all(&path)?; }
-            let mut file = File::create(&path.join(format!("{}-{}.jar", self.name, version)))?;
+            let mut file = File::create(path.join(format!("{}-{}.jar", self.name, version)))?;
 
             download(response, &mut file);
 
@@ -107,7 +107,7 @@ impl Jar {
                 path,
             );
         });
-        println!("🗂️ Downloaded {}! ({} elapsed)", colorize(&self.name, Color::Green), colorize(exec_time.as_str(), Color::Yellow));
+        println!("🗂️  Downloaded {}! ({} elapsed)", colorize(&self.name, Color::Green), colorize(exec_time.as_str(), Color::Yellow));
         Ok(server)
     }
 
@@ -116,10 +116,6 @@ impl Jar {
         let mut body: JarProjectInfo = response.json()?;
         body.versions.reverse();
         Ok(body.versions)
-    }
-
-    fn to_string(&self) -> String {
-        format!("{}: {}", self.name, self.download_url)
     }
 }
 
