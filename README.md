@@ -7,7 +7,7 @@ Heyo! I made a cool CLI to manage servers locally and externally. Like it? Consi
 ## Description
 Boxes is a tool designed to manage Minecraft servers locally. It provides a convenient way to start, stop, and configure Minecraft servers on your local machine. With Boxes, you can easily create and manage multiple server instances, *install plugins* (WIP), and customize server settings. Whether you're a Minecraft enthusiast or a server administrator, Boxes simplifies the process of running Minecraft servers locally, allowing you to focus on enjoying the game or managing your community!
 
-This tool only supports **Windows** unless you build your own version by cloning the repository.
+This tool only supports **Windows** and **MacOS (With Cargo)** unless you build your own version by cloning the repository.
 
 
 ## Installation
