@@ -26,12 +26,19 @@ jobs:
       - name: Build binaries
         run: cargo build --release
 
-      - name: Archive binaries
-        run: zip -r binaries.zip target/release/*
-
       - name: Publish release
-        uses: softprops/action-gh-release@50195ba7f6f93d1ac97ba8332a178e008ad176aa
+        uses: softprops/action-gh-release@v1
         with:
-          tag_name: boxes-0.1.0
-          files: |
-            binaries.zip
+          tag_name: boxes-0.1.0-${{ matrix.os }}
+          draft: true
+
+      - name: Upload binary
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./target/release/my_binary
+          asset_name: my_binary-${{ matrix.os }}
+          asset_content_type: application/octet-stream
+          
