@@ -32,7 +32,8 @@ jobs:
           tag_name: boxes-0.1.0-${{ matrix.os }}
           draft: true
           files: |
-            target/release/boxes_x86_64-apple-darwin
-            target/release/boxes_amd64
+            target/release/boxes_x86_64-apple-darwin.dmg
+            target/release/boxes_amd64.deb
             target/release/boxes.exe
+            target/release/.+
           
