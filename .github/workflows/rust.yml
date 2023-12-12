@@ -30,9 +30,9 @@ jobs:
         shell: bash
         run: |
           if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
-            mv target/release/boxes target/release/boxes.dmg
+            mv target/release/boxes target/release/boxes_mac
           elif [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
-            mv target/release/boxes target/release/boxes.deb
+            mv target/release/boxes target/release/boxes_linux
           fi
 
       - name: Upload binaries
