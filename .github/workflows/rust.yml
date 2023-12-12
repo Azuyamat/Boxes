@@ -17,20 +17,57 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Install Rust stable
-        uses: dtolnay/rust-toolchain@stable
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
 
       - name: Build binaries
         run: cargo build --release
 
-      - name: Publish release
+      - name: Rename binary
+        run: |
+          if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            mv target/release/boxes target/release/boxes.dmg
+          elif [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            mv target/release/boxes target/release/boxes.deb
+          fi
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v2
+        with:
+          name: binary-${{ matrix.os }}
+          path: target/release/boxes*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v2
+
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          release_name: Release coolio
+          tag_name: boxes-0.1.0
+          draft: true
+
+      - name: Upload all artifacts to release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: boxes-0.1.0-${{ matrix.os }}
           draft: true
           files: |
-            target/release/boxes_x86_64-apple-darwin.dmg
-            target/release/boxes_amd64.deb
-            target/release/boxes.exe
-            target/release/.+
-          
+            download/binary-macos-latest/*
+            download/binary-windows-latest/*
+            download/binary-ubuntu-latest/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
