@@ -25,6 +25,7 @@ jobs:
         with:
           files: |
             target/release/boxes_amd64
+          draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -49,6 +50,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: target/release/boxes.exe
+          draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -74,5 +76,6 @@ jobs:
         with:
           files: |
             target/release/boxes_macos
+          draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
