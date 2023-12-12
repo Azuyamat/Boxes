@@ -29,16 +29,12 @@ jobs:
       - name: Archive binaries
         run: zip -r binaries.zip target/release/*
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish release
+        uses: softprops/action-gh-release@50195ba7f6f93d1ac97ba8332a178e008ad176aa
         with:
-          tag_name: v${{ github.run_number }}
-          release_name: Release ${{ github.run_number }}
-          draft: true
-          prerelease: false
+          tag_name: boxes-0.1.0
+          files: |
+            binaries.zip
 
       - name: Upload binaries
         uses: actions/upload-release-asset@v1
