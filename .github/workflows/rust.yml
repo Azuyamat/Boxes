@@ -3,7 +3,7 @@ name: Rust
 on: [push]
 
 jobs:
-  build:
+  build-linux:
     runs-on: ubuntu-latest
 
     steps:
@@ -18,13 +18,12 @@ jobs:
           override: true
 
       - name: Build
-        run: cargo build --all --release && strip target/release/boxes && mv target/release/boxes target/release/boxes_amd64
+        run: cargo build --all --release && mv target/release/boxes target/release/boxes_amd64
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            target/release/boxes_amd64
+          files: target/release/boxes_amd64
           draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -74,8 +73,7 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            target/release/boxes_macos
+          files: target/release/boxes_macos
           draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
