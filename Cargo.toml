@@ -14,3 +14,6 @@ blocking = "1.5.1"
 confy = "0.5.1"
 clap = { version = "4.4.11", features = ["derive"] }
 inquire = "0.6.2"
+
+[target.x86_64-apple-darwin]
+linker = "rust-lld"
