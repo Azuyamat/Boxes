@@ -22,7 +22,6 @@ jobs:
 
       - name: Release
         uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
             target/release/boxes_amd64
@@ -48,7 +47,6 @@ jobs:
 
       - name: Release
         uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: target/release/boxes.exe
         env:
@@ -65,18 +63,16 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-          target: x86_64-apple-darwin
           default: true
           override: true
 
-      - name: Build for mac
-        run: cargo build --all --release && strip target/release/boxes && mv target/release/boxes target/release/boxes_darwin
+      - name: Build
+        run: cargo build --all --release && mv target/release/boxes target/release/boxes_macos
 
       - name: Release
         uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            target/release/boxes_darwin
+            target/release/boxes_macos
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
