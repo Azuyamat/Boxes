@@ -35,13 +35,3 @@ jobs:
           tag_name: boxes-0.1.0
           files: |
             binaries.zip
-
-      - name: Upload binaries
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: binaries.zip
-          asset_name: binaries.zip
-          asset_content_type: application/zip
