@@ -31,14 +31,7 @@ jobs:
         with:
           tag_name: boxes-0.1.0-${{ matrix.os }}
           draft: true
-
-      - name: Upload binary
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./target/release/my_binary
-          asset_name: my_binary-${{ matrix.os }}
-          asset_content_type: application/octet-stream
+          files: |
+            target/release/boxes
+            target/release/boxes.exe
           
