@@ -95,6 +95,10 @@ pub(crate) fn execute(args: Args, mut config: Config) -> Result<(), Error> {
                         println!("⚠️ A server with the same name already exists! Please enter a different name:");
                         continue;
                     }
+                    let length = server_name.len() as u8;
+                    if length < 1 || length > 100 {
+                        println!("⚠️ Server name must be within 1 and 100 characters. Please enter a different name:")
+                    }
                     break;
                 }
                 let jar_name = Select::new(

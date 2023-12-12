@@ -66,7 +66,7 @@ impl Server {
     pub fn run(&self) {
         let server_info = self.clone();
         self.print_info();
-        println!("🚀 Starting {} server...", self.jar_name);
+        println!("🚀 Starting {} server... {}", self.jar_name, self.location.display().to_string());
 
         let jar_dir = &self.location;
         env::set_current_dir(jar_dir).expect("Failed to change directory");
