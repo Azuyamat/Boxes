@@ -12,6 +12,13 @@ This tool only supports **Windows** unless you build your own version by cloning
 
 ## Installation
 
+### Easiest method (Requires cargo)
+
+1. Run `cargo install boxes`
+2. Enjoy :)
+
+### Second method
+
 1. Install the latest stable `.exe` from [here](https://github.com/Azuyamat/Boxes/releases/latest)
 2. Place the `.exe` under a `Boxes` folder in your `Program Files`
 3. Add the path to the parent directory of the `.exe` to the environment variables
