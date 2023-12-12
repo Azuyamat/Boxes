@@ -59,7 +59,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           release_name: Release coolio
-          tag_name: boxes-0.1.0
+          tag_name: boxes-${{ github.run_id}}
           draft: true
 
       - name: Upload all artifacts to release
