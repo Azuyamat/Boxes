@@ -67,8 +67,8 @@ jobs:
         with:
           draft: true
           files: |
-            download/binary-macos-latest/*
-            download/binary-windows-latest/*
-            download/binary-ubuntu-latest/*
+            binary-macos-latest/*
+            binary-windows-latest/*
+            binary-ubuntu-latest/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
