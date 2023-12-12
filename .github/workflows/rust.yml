@@ -24,3 +24,11 @@ jobs:
     - uses: actions/checkout@v3
     - name: Build
       run: cargo build --verbose
+    - uses: actions/checkout@master
+    - name: Compile and release
+      uses: rust-build/rust-build.action@v1.4.4
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        RUSTTARGET: ${{ matrix.target }}
+        EXTRA_FILES: "README.md LICENSE"
