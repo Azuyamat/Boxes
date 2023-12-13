@@ -73,6 +73,7 @@ impl Server {
 
         // Run jar
         let mut process = Command::new("java")
+            .current_dir(&self.location)
             .arg(format!("-Dname={}", server_info.server_name.trim()))
             .arg(format!("-Xms{}", server_info.xms.unwrap_or_else(|| "1G".to_string())))
             .arg(format!("-Xmx{}", server_info.xmx.unwrap_or_else(|| "1G".to_string())))
