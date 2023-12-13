@@ -134,7 +134,7 @@ impl Server {
         let path = PathBuf::from(path);
         let server_info = path.join("server_box.toml");
         if !server_info.exists() {
-            let config = Config::load();
+            let config = Config::load()?;
             println!("🚨 Server info not found!");
             let mut server_name;
             loop {
@@ -145,7 +145,7 @@ impl Server {
                 }
                 break;
             }
-            let jars = jars::load_jars().unwrap();
+            let jars = jars::load_jars()?;
             let jar_name = Select::new("🎚️ Please enter the server Jar", jars.jars.iter().map(|j| j.name.as_str()).collect::<Vec<&str>>()).prompt().expect("😧 Failed to get jar name");
             let jar = jars.get_jar(jar_name).expect("😧 Jar not found");
             let version = Select::new("🎚️ Please enter the server version", jar.get_versions().unwrap()).prompt().expect("😧 Failed to get jar name");

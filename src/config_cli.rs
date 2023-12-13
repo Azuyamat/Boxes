@@ -11,7 +11,7 @@ pub enum ConfigAction {
 pub fn manage_config_action(action: ConfigAction, config: &Config) -> Result<(), Error> {
     match action {
         ConfigAction::Info => {
-            config.print_info();
+            config.print_info()?;
         }
     }
     Ok(())

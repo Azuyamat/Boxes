@@ -96,7 +96,7 @@ pub(crate) fn execute(args: Args, mut config: Config) -> Result<(), Error> {
         }
         DJ::Server { action } => match action {
             ServerAction::List => {
-                config.print_info();
+                config.print_info()?;
             }
             ServerAction::Generate => {
                 let jars = load_jars()?;
