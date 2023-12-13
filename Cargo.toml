@@ -1,6 +1,6 @@
 [package]
 name = "boxes"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Azuyamat"]
 description = "Quick and easy CLI to create and manage Minecraft servers"
