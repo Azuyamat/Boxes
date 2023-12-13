@@ -1,4 +1,4 @@
-use std::{env, thread};
+use std::thread;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
@@ -66,12 +66,8 @@ impl Server {
     pub fn run(&self) {
         let server_info = self.clone();
         self.print_info();
-        println!("🚀 Starting {} server... {}", self.jar_name, self.location.display().to_string());
+        println!("🚀 Starting {} server... {}", self.jar_name, self.location.display());
 
-        let jar_dir = &self.location;
-        env::set_current_dir(jar_dir).expect("Failed to change directory");
-
-        println!("📂 Changed directory to {}", jar_dir.to_str().unwrap());
         // Find jar in dir
         let jar_name = format!("{}-{}.jar", self.jar_name, self.version);
 
@@ -81,7 +77,7 @@ impl Server {
             .arg(format!("-Xms{}", server_info.xms.unwrap_or_else(|| "1G".to_string())))
             .arg(format!("-Xmx{}", server_info.xmx.unwrap_or_else(|| "1G".to_string())))
             .arg("-jar")
-            .arg(jar_name)
+            .arg(self.location.join(jar_name))
             .arg(if !server_info.gui { "--nogui" } else { "" })
             .stdout(Stdio::piped())
             .spawn()

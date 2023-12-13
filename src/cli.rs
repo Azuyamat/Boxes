@@ -96,7 +96,7 @@ pub(crate) fn execute(args: Args, mut config: Config) -> Result<(), Error> {
                         continue;
                     }
                     let length = server_name.len() as u8;
-                    if length < 1 || length > 100 {
+                    if (1..=100).contains(&length) {
                         println!("⚠️ Server name must be within 1 and 100 characters. Please enter a different name:")
                     }
                     break;
