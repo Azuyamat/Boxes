@@ -78,9 +78,9 @@ impl Config {
     }
 
     pub fn get_server(&self, server_name: &str) -> Option<Server> {
-        let server_info = self.servers.iter().find(|s| s.server_name.to_lowercase() == server_name.to_lowercase());
-        server_info?;
-        Some(Server::from_path(server_info.unwrap().location.to_str().unwrap()))
+        let server_info = self.servers.iter().find(|s| s.server_name.to_lowercase() == server_name.to_lowercase())?;
+        let location_str = server_info.location.to_str()?;
+        Server::from_path(location_str).ok()
     }
 
     pub fn save_server(&mut self, server: &Server) {

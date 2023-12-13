@@ -4,6 +4,7 @@ use crate::error::Error;
 
 #[derive(Subcommand, Debug)]
 pub enum ConfigAction {
+    /// Get info about the config
     Info,
 }
 

@@ -13,10 +13,6 @@ pub enum Error {
     #[error("Unknown error")]
     Unknown,
 
-    #[error("Jar not found: {name}")]
-    JarNotFound { name: String },
-    #[error("Jar build not found: {name} {build}")]
-    BuildNotFound { name: String, build: u32 },
-    #[error("Server not found: {name}")]
-    ServerNotFound { name: String },
+    #[error("Resource not found: {0}")]
+    ResourceNotFound(String),
 }

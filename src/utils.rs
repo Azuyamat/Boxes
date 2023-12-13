@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::{Write};
 use reqwest::blocking::Response;
+use crate::error::Error;
 
 pub enum Color {
     Black,
@@ -75,10 +76,8 @@ macro_rules! get_exec_time {
     }};
 }
 
-#[macro_export]
-macro_rules! read_line {
-    ($($arg:tt)*) => {{
-        let text: String = inquire::Text::new($($arg)*).prompt().expect("😧 Failed to read line");
-        text
-    }};
+
+pub fn read_line(prompt: &str) -> Result<String, Error> {
+    let text = inquire::Text::new(prompt).prompt()?;
+    Ok(text)
 }

@@ -5,8 +5,8 @@ use std::process::{Command, Stdio};
 use inquire::Select;
 use serde::{Deserialize, Serialize};
 use crate::config::Config;
+use crate::error::Error;
 use crate::minecraft::jars;
-use crate::read_line;
 use crate::utils::*;
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -63,7 +63,7 @@ impl Server {
             ===================", jar_name, version, build, location, gui, xms, xmx);
     }
 
-    pub fn run(&self) {
+    pub fn run(&self) -> Result<(), Error> {
         let server_info = self.clone();
         self.print_info();
         println!("🚀 Starting {} server... {}", self.jar_name, self.location.display());
@@ -90,14 +90,17 @@ impl Server {
             for line in reader.lines() {
                 let text = line.unwrap();
                 if text.contains("You need to agree to the EULA in order to run the server. Go to eula.txt for more info.") {
-                    let input = read_line!("🚨 EULA not accepted! Would you like to accept? (y/n)").to_lowercase();
+                    let input = read_line("🚨 EULA not accepted! Would you like to accept? (y/n)")?.to_lowercase();
                     if input == "y" {
                         println!("🛑 Stopping server");
                         process.kill().expect("Failed to kill child");
                         self.accept_eula();
                         let server_clone = self.clone();
                         let server_copy = thread::spawn(move || {
-                            server_clone.run();
+                            match server_clone.run() {
+                                Ok(_) => println!("📦 Server started successfully."),
+                                Err(e) => eprintln!("🚨 An error occurred while starting the server: {}", e),
+                            }
                         });
                         server_copy.join().unwrap();
                         break;
@@ -110,7 +113,8 @@ impl Server {
             }
         }
 
-        process.wait().expect("Failed to wait on child");
+        process.wait()?;
+        Ok(())
     }
 
     pub fn accept_eula(&self) {
@@ -126,7 +130,7 @@ impl Server {
         println!("📝 Accepted EULA!");
     }
 
-    pub fn from_path(path: &str) -> Self {
+    pub fn from_path(path: &str) -> Result<Self, Error> {
         let path = PathBuf::from(path);
         let server_info = path.join("server_box.toml");
         if !server_info.exists() {
@@ -134,7 +138,7 @@ impl Server {
             println!("🚨 Server info not found!");
             let mut server_name;
             loop {
-                server_name = read_line!("🎚️ Please enter the server name:");
+                server_name = read_line("🎚️ Please enter the server name:")?;
                 if config.get_server(&server_name).is_some() {
                     println!("⚠️ A server with the same name already exists! Please enter a different name:");
                     continue;
@@ -156,11 +160,11 @@ impl Server {
                 path.clone(),
             );
             server.write();
-            return server;
+            return Ok(server);
         }
         let server_info = std::fs::read_to_string(server_info).unwrap();
         let server_info: Server = toml::from_str(&server_info).unwrap();
-        server_info
+        Ok(server_info)
     }
 
     pub fn delete(&self) {

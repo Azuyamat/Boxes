@@ -71,8 +71,9 @@ impl Jar {
         }
     }
 
-    pub fn get_latest_build(&self, version: String) -> Result<String, Error> {
-        Ok(self.get_builds(&version).unwrap().first().unwrap().to_string())
+    pub fn get_latest_build(&self, version: String) -> Option<u32> {
+        let builds = self.get_builds(&version).ok()?;
+        builds.first().copied()
     }
 
     pub fn get_builds(&self, version: &str) -> Result<Vec<u32>, Error> {

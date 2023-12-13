@@ -3,9 +3,9 @@ use crate::config::Config;
 use crate::config_cli::ConfigAction;
 use crate::error::Error;
 use crate::minecraft::jars::load_jars;
-use crate::read_line;
 use clap::{Parser, Subcommand};
 use inquire::Select;
+use crate::utils::read_line;
 
 #[derive(Debug, Parser)]
 #[command(author, version, about)]
@@ -40,13 +40,21 @@ pub enum DJ {
 
 #[derive(Subcommand, Debug)]
 pub enum ServerAction {
+    /// List all servers
     List,
+    /// Generate a server with a wizard
     Generate,
+    /// Get info about a server with the given name
     Info { name: String },
+    /// Start a server with the given name
     Start { name: String },
+    /// Delete a server with the given name
     Delete { name: String },
+    /// Add a server with the given location
     Add { location: String },
+    /// Get plugins for a server with the given name
     Plugins { name: String },
+    /// Assign an IP to a server with the given name
     AssignIP { name: String, ip: String },
 }
 
@@ -64,15 +72,15 @@ pub(crate) fn execute(args: Args, mut config: Config) -> Result<(), Error> {
             // Print with emoji
             println!("🔥 Creating server...");
             let jars = load_jars()?;
-            let jar = jars.get_jar(&jar).ok_or(Error::JarNotFound{ name: jar })?;
+            let jar = jars.get_jar(&jar).ok_or(Error::ResourceNotFound("Jar not found".to_string()))?;
             let build = match build {
                 Some(build) => build,
-                None => jar.get_latest_build(version.clone())?,
+                None => jar.get_latest_build(version.clone()).ok_or(Error::ResourceNotFound("Jar build not found".to_string()))?.to_string(),
             };
             let mut path = Path::new(&location);
             while !path.exists() {
                 println!("🚨 Path does not exist!");
-                location = read_line!("🎚️ Please enter the server location:");
+                location = read_line("🎚️ Please enter the server location:")?;
                 path = Path::new(&location);
             }
             let server = jar
@@ -80,8 +88,8 @@ pub(crate) fn execute(args: Args, mut config: Config) -> Result<(), Error> {
             config.add_server(&server);
         }
         DJ::Start { name } => {
-            let server = config.get_server(&name).ok_or(Error::ServerNotFound{ name })?;
-            server.run();
+            let server = config.get_server(&name).ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
+            server.run()?;
         }
         DJ::Config { action } => {
             crate::config_cli::manage_config_action(action, &config)?;
@@ -95,7 +103,7 @@ pub(crate) fn execute(args: Args, mut config: Config) -> Result<(), Error> {
                 println!("🎚️ Welcome to the server generator");
                 let mut server_name;
                 loop {
-                    server_name = read_line!("🎚️ Please enter the server name:");
+                    server_name = read_line("🎚️ Please enter the server name:")?;
                     if config.get_server(&server_name).is_some() {
                         println!("⚠️ A server with the same name already exists! Please enter a different name:");
                         continue;
@@ -103,7 +111,7 @@ pub(crate) fn execute(args: Args, mut config: Config) -> Result<(), Error> {
                     let length = server_name.len() as u8;
                     if !(1..=100).contains(&length) {
                         println!("⚠️ Server name must be within 1 and 100 characters. Please enter a different name:");
-                        server_name = read_line!("🎚️ Please enter the server name:");
+                        server_name = read_line("🎚️ Please enter the server name:")?;
                     }
                     break;
                 }
@@ -115,31 +123,31 @@ pub(crate) fn execute(args: Args, mut config: Config) -> Result<(), Error> {
                         .collect::<Vec<&str>>(),
                 )
                 .prompt()?;
-                let jar = jars.get_jar(jar_name).ok_or(Error::JarNotFound { name: jar_name.to_string() })?;
+                let jar = jars.get_jar(jar_name).ok_or(Error::ResourceNotFound("Jar not found".to_string()))?;
                 let version = Select::new(
                     "🎚️ Please enter the server version",
                     jar.get_versions()?,
                 )
                 .prompt()?;
                 let builds = jar.get_builds(&version)?;
-                let latest = builds.first().ok_or(Error::BuildNotFound { name: jar_name.to_string(), build: 0 })?;
+                let latest = builds.first().ok_or(Error::ResourceNotFound("Jar build not found".to_string()))?;
                 let build = Select::new(
                     &format!("🎚️ Please enter the jar build ({} is latest)", latest),
                     builds,
                 )
                 .prompt()?
                 .to_string();
-                let mut location = read_line!("🎚️ Please enter the server location:");
+                let mut location = read_line("🎚️ Please enter the server location:")?;
                 let mut path = Path::new(&location);
                 if location.is_empty() {
                     // Set path to location where the command was run
-                    location = std::env::current_dir().unwrap().to_str().unwrap().to_string();
+                    location = std::env::current_dir()?.to_str().unwrap().to_string();
                     path = Path::new(&location);
                     println!("🎚️ Using current directory as server location ({}).", location);
                 }
                 while !path.exists() {
                     println!("🚨 Path does not exist!");
-                    location = read_line!("🎚️ Please enter the server location:");
+                    location = read_line("🎚️ Please enter the server location:")?;
                     path = Path::new(&location);
                 }
                 let server = jar
@@ -148,29 +156,29 @@ pub(crate) fn execute(args: Args, mut config: Config) -> Result<(), Error> {
                 config.add_server(&server);
             }
             ServerAction::Info { name } => {
-                let server = config.get_server(&name).ok_or(Error::ServerNotFound{ name })?;
+                let server = config.get_server(&name).ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
                 server.print_info();
             }
             ServerAction::Start { name } => {
-                let server = config.get_server(&name).ok_or(Error::ServerNotFound{ name })?;
-                server.run();
+                let server = config.get_server(&name).ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
+                server.run()?;
             }
             ServerAction::Delete { name } => {
-                let server = config.get_server(&name).ok_or(Error::ServerNotFound{ name })?;
+                let server = config.get_server(&name).ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
                 server.delete();
             }
             ServerAction::Add { location } => {
-                let server = crate::minecraft::server::Server::from_path(&location);
+                let server = crate::minecraft::server::Server::from_path(&location)?;
                 config.add_server(&server);
             }
             ServerAction::Plugins { name } => {
-                let server = config.get_server(&name).ok_or(Error::ServerNotFound{ name })?;
+                let server = config.get_server(&name).ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
                 for plugin in server.plugins() {
                     println!("{plugin}");
                 }
             }
             ServerAction::AssignIP { name, ip } => {
-                let server = config.get_server(&name).ok_or(Error::ServerNotFound{ name: name.clone() })?;
+                let server = config.get_server(&name).ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
                 let manipulator = crate::minecraft::server_manipulator::ServerManipulator {
                     server: server.clone(),
                 };
