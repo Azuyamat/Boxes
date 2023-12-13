@@ -64,11 +64,11 @@ pub(crate) fn execute(args: Args, mut config: Config) -> Result<(), Error> {
             // Print with emoji
             println!("🔥 Creating server...");
             let jars = load_jars()?;
-            let jar = jars.get_jar(&jar).expect("😧 Jar not found");
-            let build = build.unwrap_or_else(|| {
-                jar.get_latest_build(version.clone())
-                    .expect("😧 Failed to get latest build")
-            });
+            let jar = jars.get_jar(&jar).ok_or(Error::JarNotFound{ name: jar })?;
+            let build = match build {
+                Some(build) => build,
+                None => jar.get_latest_build(version.clone())?,
+            };
             let mut path = Path::new(&location);
             while !path.exists() {
                 println!("🚨 Path does not exist!");
@@ -76,17 +76,15 @@ pub(crate) fn execute(args: Args, mut config: Config) -> Result<(), Error> {
                 path = Path::new(&location);
             }
             let server = jar
-                .download(&version, &build, &name, path.to_path_buf())
-                .expect("😧 Failed to download jar (Check that the version and build exist)");
+                .download(&version, &build, &name, path.to_path_buf())?;
             config.add_server(&server);
         }
         DJ::Start { name } => {
-            let server = config.get_server(&name).unwrap();
+            let server = config.get_server(&name).ok_or(Error::ServerNotFound{ name })?;
             server.run();
         }
         DJ::Config { action } => {
-            crate::config_cli::manage_config_action(action, &config)
-                .expect("😧 Failed to manage config action");
+            crate::config_cli::manage_config_action(action, &config)?;
         }
         DJ::Server { action } => match action {
             ServerAction::List => {
@@ -116,23 +114,20 @@ pub(crate) fn execute(args: Args, mut config: Config) -> Result<(), Error> {
                         .map(|j| j.name.as_str())
                         .collect::<Vec<&str>>(),
                 )
-                .prompt()
-                .expect("😧 Failed to get jar name");
-                let jar = jars.get_jar(jar_name).expect("😧 Jar not found");
+                .prompt()?;
+                let jar = jars.get_jar(jar_name).ok_or(Error::JarNotFound { name: jar_name.to_string() })?;
                 let version = Select::new(
                     "🎚️ Please enter the server version",
-                    jar.get_versions().unwrap(),
+                    jar.get_versions()?,
                 )
-                .prompt()
-                .expect("😧 Failed to get jar name");
-                let builds = jar.get_builds(&version).unwrap();
-                let latest = builds.first().unwrap();
+                .prompt()?;
+                let builds = jar.get_builds(&version)?;
+                let latest = builds.first().ok_or(Error::BuildNotFound { name: jar_name.to_string(), build: 0 })?;
                 let build = Select::new(
                     &format!("🎚️ Please enter the jar build ({} is latest)", latest),
                     builds,
                 )
-                .prompt()
-                .expect("😧 Failed to get jar build")
+                .prompt()?
                 .to_string();
                 let mut location = read_line!("🎚️ Please enter the server location:");
                 let mut path = Path::new(&location);
@@ -148,21 +143,20 @@ pub(crate) fn execute(args: Args, mut config: Config) -> Result<(), Error> {
                     path = Path::new(&location);
                 }
                 let server = jar
-                    .download(&version, &build, &server_name, path.to_path_buf())
-                    .expect("😧 Failed to download jar (Check that the version and build exist)");
+                    .download(&version, &build, &server_name, path.to_path_buf())?;
                 println!("🎛️ Server generated!");
                 config.add_server(&server);
             }
             ServerAction::Info { name } => {
-                let server = config.get_server(&name).expect("😧 Server not found");
+                let server = config.get_server(&name).ok_or(Error::ServerNotFound{ name })?;
                 server.print_info();
             }
             ServerAction::Start { name } => {
-                let server = config.get_server(&name).expect("😧 Server not found");
+                let server = config.get_server(&name).ok_or(Error::ServerNotFound{ name })?;
                 server.run();
             }
             ServerAction::Delete { name } => {
-                let server = config.get_server(&name).expect("😧 Server not found");
+                let server = config.get_server(&name).ok_or(Error::ServerNotFound{ name })?;
                 server.delete();
             }
             ServerAction::Add { location } => {
@@ -170,13 +164,13 @@ pub(crate) fn execute(args: Args, mut config: Config) -> Result<(), Error> {
                 config.add_server(&server);
             }
             ServerAction::Plugins { name } => {
-                let server = config.get_server(&name).unwrap();
+                let server = config.get_server(&name).ok_or(Error::ServerNotFound{ name })?;
                 for plugin in server.plugins() {
                     println!("{plugin}");
                 }
             }
             ServerAction::AssignIP { name, ip } => {
-                let server = config.get_server(&name).expect("😧 Server not found");
+                let server = config.get_server(&name).ok_or(Error::ServerNotFound{ name: name.clone() })?;
                 let manipulator = crate::minecraft::server_manipulator::ServerManipulator {
                     server: server.clone(),
                 };
