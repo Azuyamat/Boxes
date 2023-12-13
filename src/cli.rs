@@ -1,3 +1,4 @@
+use std::path::Path;
 use crate::config::Config;
 use crate::config_cli::ConfigAction;
 use crate::error::Error;
@@ -58,7 +59,7 @@ pub(crate) fn execute(args: Args, mut config: Config) -> Result<(), Error> {
             jar,
             version,
             build,
-            location,
+            mut location,
         } => {
             // Print with emoji
             println!("🔥 Creating server...");
@@ -68,8 +69,14 @@ pub(crate) fn execute(args: Args, mut config: Config) -> Result<(), Error> {
                 jar.get_latest_build(version.clone())
                     .expect("😧 Failed to get latest build")
             });
+            let mut path = Path::new(&location);
+            while !path.exists() {
+                println!("🚨 Path does not exist!");
+                location = read_line!("🎚️ Please enter the server location:");
+                path = Path::new(&location);
+            }
             let server = jar
-                .download(&version, &build, &name, location)
+                .download(&version, &build, &name, path.to_path_buf())
                 .expect("😧 Failed to download jar (Check that the version and build exist)");
             config.add_server(&server);
         }
@@ -96,8 +103,9 @@ pub(crate) fn execute(args: Args, mut config: Config) -> Result<(), Error> {
                         continue;
                     }
                     let length = server_name.len() as u8;
-                    if (1..=100).contains(&length) {
-                        println!("⚠️ Server name must be within 1 and 100 characters. Please enter a different name:")
+                    if !(1..=100).contains(&length) {
+                        println!("⚠️ Server name must be within 1 and 100 characters. Please enter a different name:");
+                        server_name = read_line!("🎚️ Please enter the server name:");
                     }
                     break;
                 }
@@ -126,9 +134,21 @@ pub(crate) fn execute(args: Args, mut config: Config) -> Result<(), Error> {
                 .prompt()
                 .expect("😧 Failed to get jar build")
                 .to_string();
-                let location = read_line!("🎚️ Please enter the server location:");
+                let mut location = read_line!("🎚️ Please enter the server location:");
+                let mut path = Path::new(&location);
+                if location.is_empty() {
+                    // Set path to location where the command was run
+                    location = std::env::current_dir().unwrap().to_str().unwrap().to_string();
+                    path = Path::new(&location);
+                    println!("🎚️ Using current directory as server location ({}).", location);
+                }
+                while !path.exists() {
+                    println!("🚨 Path does not exist!");
+                    location = read_line!("🎚️ Please enter the server location:");
+                    path = Path::new(&location);
+                }
                 let server = jar
-                    .download(&version, &build, &server_name, location)
+                    .download(&version, &build, &server_name, path.to_path_buf())
                     .expect("😧 Failed to download jar (Check that the version and build exist)");
                 println!("🎛️ Server generated!");
                 config.add_server(&server);

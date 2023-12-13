@@ -1,5 +1,6 @@
 use std::fmt::Display;
 use std::fs::File;
+use std::path::PathBuf;
 use serde::Deserialize;
 use crate::error::Error;
 use crate::get_exec_time;
@@ -83,7 +84,7 @@ impl Jar {
         Ok(body.builds)
     }
 
-    pub fn download(&self, version: &str, build: &str, server_name: &str, location: String) -> Result<Server, Error> {
+    pub fn download(&self, version: &str, build: &str, server_name: &str, location: PathBuf) -> Result<Server, Error> {
         println!("🗂️  Downloading {}...", colorize(&self.name, Color::Green));
         let server: Server;
         let exec_time = get_exec_time!({
