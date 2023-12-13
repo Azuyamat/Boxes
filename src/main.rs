@@ -10,9 +10,12 @@ mod config;
 mod cli;
 mod config_cli;
 
+use cli::constructor;
+use cli::executor;
+
 fn main() -> Result<(), error::Error> {
-    let args = cli::Args::parse();
+    let args = constructor::Args::parse();
     let config = Config::load()?;
-    cli::execute(args, config)?;
+    executor::execute(args, config)?;
     Ok(())
 }
