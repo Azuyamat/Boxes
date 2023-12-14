@@ -12,9 +12,9 @@
 use crate::cli::constructor::{Args, ServerAction, DJ};
 use crate::cli::generator;
 use crate::config::Config;
-use crate::config_cli;
+use crate::cli::config_cli;
 use crate::error::Error;
-use crate::minecraft::jars::load_jars;
+use crate::minecraft::jars::load;
 use crate::minecraft::server::Server;
 use crate::minecraft::server_manipulator::ServerManipulator;
 use crate::themes::theme::Theme;
@@ -23,7 +23,7 @@ use std::path::Path;
 
 use super::constructor::ThemeAction;
 
-pub(crate) fn execute(args: Args, mut config: Config, theme: Theme) -> Result<(), Error> {
+pub(crate) fn execute(args: Args, mut config: Config, theme: &Theme) -> Result<(), Error> {
     let verbose = args.verbose;
     match args.dj {
         DJ::Create {
@@ -35,14 +35,14 @@ pub(crate) fn execute(args: Args, mut config: Config, theme: Theme) -> Result<()
         } => {
             // Print with emoji
             println!("🔥 Creating server...");
-            let jars = load_jars()?;
+            let jars = load()?;
             let jar = jars
                 .get_jar(&jar)
                 .ok_or(Error::ResourceNotFound("Jar not found".to_string()))?;
             let build = match build {
                 Some(build) => build,
                 None => jar
-                    .get_latest_build(version.clone())
+                    .get_latest_build(version.as_str())
                     .ok_or(Error::ResourceNotFound("Jar build not found".to_string()))?
                     .to_string(),
             };
@@ -66,13 +66,13 @@ pub(crate) fn execute(args: Args, mut config: Config, theme: Theme) -> Result<()
         }
 
         // Actions
-        DJ::Server { action } => handle_server_action(action, &mut config),
-        DJ::Theme { action } => handle_theme_action(action)
+        DJ::Server { action } => handle_server_action(action, &mut config, verbose),
+        DJ::Theme { action } => handle_theme_action(action, verbose)
     }
     Ok(())
 }
 
-fn handle_server_action(action: ServerAction, config: &mut Config) {
+fn handle_server_action(action: ServerAction, config: &mut Config, verbose: bool) {
     match action {
         ServerAction::List => {
             config.print_info().unwrap();
@@ -113,6 +113,7 @@ fn handle_server_action(action: ServerAction, config: &mut Config) {
                 plugins.len()
             );
             for plugin in plugins {
+                let plugin = plugin.to_string_lossy().to_string();
                 println!(" - {plugin}");
             }
         }
@@ -123,16 +124,23 @@ fn handle_server_action(action: ServerAction, config: &mut Config) {
             let manipulator = ServerManipulator {
                 server: server.clone(),
             };
-            let mut properties = manipulator.get_server_properties();
-            println!("📝 Assigning {name}'s IP to {ip}...");
-            properties.insert("server-ip".to_string(), ip.clone());
-            manipulator.save_server_properties(&properties);
-            println!("📝 Assigned {name}'s IP to {ip}!");
+            if let Some(mut properties) = manipulator.get_server_properties() {
+                println!("📝 Assigning {name}'s IP to {ip}...");
+                properties.insert("server-ip".to_string(), ip.clone());
+                manipulator.save_server_properties(&properties);
+                println!("📝 Assigned {name}'s IP to {ip}!");
+            }
+        }
+        ServerAction::Optimize { name } => {
+            let server = config
+                .get_server(&name)
+                .ok_or(Error::ResourceNotFound("Server not found".to_string())).unwrap();
+            server.optimize(verbose);
         }
     }
 }
 
-fn handle_theme_action(action: ThemeAction) {
+fn handle_theme_action(action: ThemeAction, verbose: bool) {
     match action {
         ThemeAction::List => {
             todo!()

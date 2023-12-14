@@ -2,11 +2,11 @@ use std::path::Path;
 use inquire::Select;
 use crate::config::Config;
 use crate::error::Error;
-use crate::minecraft::jars::load_jars;
+use crate::minecraft::jars::load;
 use crate::utils::read_line;
 
 pub fn prompt_wizard(config: &mut Config) -> Result<(), Error> {
-    let jars = load_jars()?;
+    let jars = load()?;
     println!("🎚️ Welcome to the server generator");
     let mut server_name;
     loop {

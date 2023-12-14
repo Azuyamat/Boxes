@@ -7,6 +7,7 @@
     clippy::complexity
 )]
 
+use std::ffi::OsString;
 use crate::config::Config;
 use crate::error::Error;
 use crate::minecraft::jars;
@@ -14,11 +15,10 @@ use crate::utils::{colorize, Color, read_line};
 use inquire::Select;
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::thread;
 use crate::minecraft::server_manipulator::ServerManipulator;
-use crate::utils::*;
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Server {
@@ -40,7 +40,7 @@ impl Server {
         jar_name: String,
         version: String,
         build: String,
-        location: PathBuf,
+        location: &Path,
     ) -> Self {
         assert!(location.exists(), "Jar file not found!");
 
@@ -49,7 +49,7 @@ impl Server {
             jar_name,
             version,
             build,
-            location: location.clone(),
+            location: location.to_path_buf(),
             gui: false,
             xms: None,
             xmx: None,
@@ -60,6 +60,7 @@ impl Server {
         server
     }
 
+    #[allow(clippy::pedantic)]
     pub fn print_info(&self) {
         let jar_name = colorize(self.jar_name.as_str(), Color::Gold);
         let version = colorize(self.version.as_str(), Color::Gold);
@@ -208,7 +209,7 @@ impl Server {
                 }
                 break;
             }
-            let jars = jars::load_jars()?;
+            let jars = jars::load()?;
             let jar_name = Select::new(
                 "🎚️ Please enter the server Jar",
                 jars.jars
@@ -228,7 +229,7 @@ impl Server {
             let builds = jar.get_builds(&version).unwrap();
             let latest = builds.first().unwrap();
             let build = Select::new(
-                &format!("🎚️ Please enter the jar build ({} is latest)", latest),
+                &format!("🎚️ Please enter the jar build ({latest} is latest)"),
                 builds,
             )
             .prompt()
@@ -239,7 +240,7 @@ impl Server {
                 jar_name.to_string(),
                 version,
                 build,
-                path.clone(),
+                &path,
             );
             server.write();
             return Ok(server);
@@ -255,7 +256,7 @@ impl Server {
         println!("📝 Deleted server!");
     }
 
-    pub fn plugins(&self) -> Vec<String> {
+    pub fn plugins(&self) -> Vec<OsString> {
         let dir = self.location.join("plugins");
         if !dir.exists() {
             println!("🚨 Plugins directory not found!");
@@ -264,9 +265,12 @@ impl Server {
         dir.read_dir()
             .unwrap()
             .filter_map(|entry| {
-                let name = entry.unwrap().file_name().into_string().unwrap();
-                if name.ends_with(".jar") {
-                    Some(name)
+                if let Ok(entry) = entry {
+                    if Path::new(&entry.path()).extension().unwrap_or_default() == "jar" {
+                        Some(entry.file_name())
+                    } else {
+                        None
+                    }
                 } else {
                     None
                 }
@@ -295,7 +299,7 @@ impl Server {
         println!("📝 Removed plugin!");
     }
 
-    pub fn  optimize(&self, verbose: bool) -> Result<(), Error> {
+    pub fn  optimize(&self, verbose: bool) {
         println!("🗂️  Optimizing {} using https://github.com/YouHaveTrouble/minecraft-optimization", colorize(&self.server_name, Color::Gold));
         let manipulator = ServerManipulator {
             server: self.clone(),
@@ -309,7 +313,5 @@ impl Server {
             manipulator.save_server_properties(&properties);
             println!("🗂️  Optimized server.properties!");
         }
-
-        Ok(())
     }
 }

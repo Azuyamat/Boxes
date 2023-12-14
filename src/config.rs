@@ -60,7 +60,7 @@ impl Config {
                 running
             );
         }
-        jars::load_jars().unwrap().print_info();
+        jars::load().unwrap().print_info();
         Ok(())
     }
 

@@ -1,11 +1,10 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused_variables)]
 
 use crate::config::Config;
 use clap::Parser;
 
 mod cli;
 mod config;
-mod config_cli;
 mod error;
 mod minecraft;
 mod themes;
@@ -19,6 +18,6 @@ fn main() -> Result<(), error::Error> {
     let args = constructor::Args::parse();
     let config = Config::load()?;
     let theme = Theme::load()?;
-    executor::execute(args, config, theme)?;
+    executor::execute(args, config, &theme)?;
     Ok(())
 }

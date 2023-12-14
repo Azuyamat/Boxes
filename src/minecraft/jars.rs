@@ -9,7 +9,7 @@ use crate::error::Error;
 use crate::get_exec_time;
 use crate::minecraft::server::Server;
 use crate::utils::colorize;
-use crate::utils::*;
+use crate::utils::{Color, download};
 use serde::Deserialize;
 use std::fmt::Display;
 use std::fs::File;
@@ -17,7 +17,7 @@ use std::path::PathBuf;
 
 const JARS_TOML: &str = include_str!("../../jars.toml");
 
-pub fn load_jars() -> Result<JarManager, Error> {
+pub fn load() -> Result<JarManager, Error> {
     let jars: JarManager = toml::from_str(JARS_TOML)?;
 
     Ok(jars)
@@ -81,8 +81,8 @@ impl Jar {
         }
     }
 
-    pub fn get_latest_build(&self, version: String) -> Option<u32> {
-        let builds = self.get_builds(&version).ok()?;
+    pub fn get_latest_build(&self, version: &str) -> Option<u32> {
+        let builds = self.get_builds(version).ok()?;
         builds.first().copied()
     }
 
@@ -128,7 +128,7 @@ impl Jar {
                 self.name.clone(),
                 version.to_string(),
                 build.to_string(),
-                path,
+                &path,
             );
         });
         println!(
