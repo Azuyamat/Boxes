@@ -8,7 +8,7 @@ pub struct Args {
     pub dj: DJ,
 
     #[clap(short, long)]
-    pub verbose: bool,
+    pub verbose: bool, // 🗨️
 }
 
 #[derive(Subcommand, Debug)]

@@ -1,15 +1,10 @@
-#![warn(
-    clippy::pedantic, 
-    clippy::complexity, 
-    clippy::perf, 
-    clippy::style
-)]
+#![warn(clippy::pedantic, clippy::complexity, clippy::perf, clippy::style)]
 
 use crate::error::Error;
 use crate::get_exec_time;
 use crate::minecraft::server::Server;
 use crate::utils::colorize;
-use crate::utils::{Color, download};
+use crate::utils::{download, Color};
 use serde::Deserialize;
 use std::fmt::Display;
 use std::fs::File;
@@ -70,7 +65,13 @@ impl JarBuildInfo for PaperJarBuildInfo {
 
 impl JarBuildInfo for PurpurJarBuildInfo {
     fn get_builds(&mut self) -> Result<Vec<u32>, Error> {
-        Ok(self.builds.all.clone().iter().map(|s| s.parse::<u32>().unwrap()).collect())
+        Ok(self
+            .builds
+            .all
+            .clone()
+            .iter()
+            .map(|s| s.parse::<u32>().unwrap())
+            .collect())
     }
 }
 
