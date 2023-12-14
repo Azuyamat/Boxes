@@ -24,6 +24,7 @@ use std::path::Path;
 use super::constructor::ThemeAction;
 
 pub(crate) fn execute(args: Args, mut config: Config, theme: Theme) -> Result<(), Error> {
+    let verbose = args.verbose;
     match args.dj {
         DJ::Create {
             name,
