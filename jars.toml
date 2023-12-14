@@ -7,7 +7,7 @@ versions_url = "https://api.papermc.io/v2/projects/paper"
 [[jars]]
 name = "Purpur"
 download_url = "https://api.purpurmc.org/v2/purpur/{version}/{build}/download"
-builds_url = "https://api.purpurmc.org/v2/purpur/{version}?detailed=true"
+builds_url = "https://api.purpurmc.org/v2/purpur/{version}"
 versions_url = "https://api.purpurmc.org/v2/purpur"
 
 [[jars]]

@@ -48,7 +48,7 @@ impl JarManager {
 }
 
 #[derive(Deserialize)]
-pub struct JarBuildInfo {
+pub struct PaperJarBuildInfo {
     pub project_id: String,
     pub project_name: String,
     pub version: String,
@@ -56,10 +56,36 @@ pub struct JarBuildInfo {
 }
 
 #[derive(Deserialize)]
+pub struct PurpurJarBuildInfo {
+    pub project: String,
+    pub version: String,
+    pub builds: PurpurBuildsInfo,
+}
+
+impl JarBuildInfo for PaperJarBuildInfo {
+    fn get_builds(&mut self) -> Result<Vec<u32>, Error> {
+        Ok(self.builds.clone())
+    }
+}
+
+impl JarBuildInfo for PurpurJarBuildInfo {
+    fn get_builds(&mut self) -> Result<Vec<u32>, Error> {
+        Ok(self.builds.all.clone().iter().map(|s| s.parse::<u32>().unwrap()).collect())
+    }
+}
+
+#[derive(Deserialize)]
+pub struct PurpurBuildsInfo {
+    pub latest: String,
+    pub all: Vec<String>,
+}
+
+#[derive(Deserialize)]
 pub struct JarProjectInfo {
-    pub project_id: String,
-    pub project_name: String,
-    pub version_groups: Vec<String>,
+    pub project: Option<String>,
+    pub project_id: Option<String>,
+    pub project_name: Option<String>,
+    pub version_groups: Option<Vec<String>>,
     pub versions: Vec<String>,
 }
 
@@ -69,6 +95,10 @@ pub struct Jar {
     pub download_url: String,
     pub builds_url: String,
     pub versions_url: String,
+}
+
+pub trait JarBuildInfo {
+    fn get_builds(&mut self) -> Result<Vec<u32>, Error>;
 }
 
 impl Jar {
@@ -89,9 +119,21 @@ impl Jar {
     pub fn get_builds(&self, version: &str) -> Result<Vec<u32>, Error> {
         let url = self.builds_url.clone().replace("{version}", version);
         let response = reqwest::blocking::get(url)?;
-        let mut body: JarBuildInfo = response.json()?;
-        body.builds.reverse();
-        Ok(body.builds)
+        let lower_name = self.name.to_lowercase();
+        let mut builds: Vec<u32>;
+        if &lower_name == "paper" {
+            let mut body = response.json::<PaperJarBuildInfo>()?;
+            builds = body.get_builds()?;
+        } else if &lower_name == "purpur" {
+            let mut body = response.json::<PurpurJarBuildInfo>()?;
+            builds = body.get_builds()?;
+        } else {
+            return Err(Error::ResourceNotFound(
+                "Jar build info not found".to_string(),
+            ));
+        }
+        builds.reverse();
+        Ok(builds)
     }
 
     pub fn download(

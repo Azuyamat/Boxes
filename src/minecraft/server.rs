@@ -159,13 +159,8 @@ impl Server {
                         process.kill().expect("Failed to kill child");
                         self.accept_eula();
                         let server_clone = self.clone();
-                        let server_copy = thread::spawn(move || {
-                            match server_clone.run() {
-                                Ok(()) => println!("📦 Server started successfully."),
-                                Err(e) => eprintln!("🚨 An error occurred while starting the server: {e}"),
-                            }
-                        });
-                        server_copy.join().unwrap();
+                        let server_copy = thread::spawn(move || server_clone.run()); // Create thread so we can get "out" of the loop
+                        server_copy.join().unwrap()?;
                         break;
                     }
 

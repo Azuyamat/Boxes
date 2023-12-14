@@ -66,46 +66,46 @@ pub(crate) fn execute(args: Args, mut config: Config, theme: &Theme) -> Result<(
         }
 
         // Actions
-        DJ::Server { action } => handle_server_action(action, &mut config, verbose),
+        DJ::Server { action } => handle_server_action(action, &mut config, verbose)?,
         DJ::Theme { action } => handle_theme_action(action, verbose)
     }
     Ok(())
 }
 
-fn handle_server_action(action: ServerAction, config: &mut Config, verbose: bool) {
+fn handle_server_action(action: ServerAction, config: &mut Config, verbose: bool) -> Result<(), Error> {
     match action {
         ServerAction::List => {
-            config.print_info().unwrap();
+            config.print_info()?;
         }
         ServerAction::Generate => {
-            generator::prompt_wizard(config).unwrap();
+            generator::prompt_wizard(config)?;
         }
         ServerAction::Info { name } => {
             let server = config
                 .get_server(&name)
-                .ok_or(Error::ResourceNotFound("Server not found".to_string())).unwrap();
+                .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
             server.print_info();
         }
         ServerAction::Start { name } => {
             let server = config
                 .get_server(&name)
-                .ok_or(Error::ResourceNotFound("Server not found".to_string())).unwrap();
-            server.run().unwrap();
+                .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
+            server.run()?;
         }
         ServerAction::Delete { name } => {
             let server = config
                 .get_server(&name)
-                .ok_or(Error::ResourceNotFound("Server not found".to_string())).unwrap();
+                .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
             server.delete();
         }
         ServerAction::Add { location } => {
-            let server = Server::from_path(&location).unwrap();
+            let server = Server::from_path(&location)?;
             config.add_server(&server);
         }
         ServerAction::Plugins { name } => {
             let server = config
                 .get_server(&name)
-                .ok_or(Error::ResourceNotFound("Server not found".to_string())).unwrap();
+                .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
             let plugins = server.plugins();
             println!(
                 "📝 Getting plugins for {} ({} plugin(s))...",
@@ -120,7 +120,7 @@ fn handle_server_action(action: ServerAction, config: &mut Config, verbose: bool
         ServerAction::AssignIP { name, ip } => {
             let server = config
                 .get_server(&name)
-                .ok_or(Error::ResourceNotFound("Server not found".to_string())).unwrap();
+                .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
             let manipulator = ServerManipulator {
                 server: server.clone(),
             };
@@ -134,10 +134,11 @@ fn handle_server_action(action: ServerAction, config: &mut Config, verbose: bool
         ServerAction::Optimize { name } => {
             let server = config
                 .get_server(&name)
-                .ok_or(Error::ResourceNotFound("Server not found".to_string())).unwrap();
+                .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
             server.optimize(verbose);
         }
     }
+    Ok(())
 }
 
 fn handle_theme_action(action: ThemeAction, verbose: bool) {
