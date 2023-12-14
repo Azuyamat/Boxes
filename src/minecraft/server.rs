@@ -1,13 +1,22 @@
-use std::thread;
-use std::io::{BufRead, BufReader};
-use std::path::PathBuf;
-use std::process::{Command, Stdio};
-use inquire::Select;
-use serde::{Deserialize, Serialize};
+#![warn(
+    clippy::cognitive_complexity,
+    clippy::debug_assert_with_mut_call,
+    clippy::doc_markdown,
+    clippy::enum_glob_use,
+    clippy::pedantic,
+    clippy::complexity
+)]
+
 use crate::config::Config;
 use crate::error::Error;
 use crate::minecraft::jars;
-use crate::utils::*;
+use crate::utils::{colorize, Color, read_line};
+use inquire::Select;
+use serde::{Deserialize, Serialize};
+use std::io::{BufRead, BufReader};
+use std::path::PathBuf;
+use std::process::{Command, Stdio};
+use std::thread;
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Server {
@@ -24,8 +33,15 @@ pub struct Server {
 }
 
 impl Server {
-    pub fn new(server_name: &str, jar_name: String, version: String, build: String, location: PathBuf) -> Self {
-        if !location.exists() { panic!("Jar file not found!"); }
+    pub fn new(
+        server_name: &str,
+        jar_name: String,
+        version: String,
+        build: String,
+        location: PathBuf,
+    ) -> Self {
+        assert!(location.exists(), "Jar file not found!");
+
         let server = Self {
             server_name: server_name.to_string(),
             jar_name,
@@ -48,25 +64,37 @@ impl Server {
         let build = colorize(self.build.as_str(), Color::Gold);
         let location = colorize(self.location.to_str().unwrap(), Color::Gold);
         let gui = colorize(if self.gui { "true" } else { "false" }, Color::Gold);
-        let xms = colorize(self.xms.as_ref().unwrap_or(&"Default".to_string()), Color::Gold);
-        let xmx = colorize(self.xmx.as_ref().unwrap_or(&"Default".to_string()), Color::Gold);
+        let xms = colorize(
+            self.xms.as_ref().unwrap_or(&"Default".to_string()),
+            Color::Gold,
+        );
+        let xmx = colorize(
+            self.xmx.as_ref().unwrap_or(&"Default".to_string()),
+            Color::Gold,
+        );
 
-        println!("\
+        println!(
+            "\
             ===================\n\
-            📦 Jar name: {}\n\
-            📦 Version: {}\n\
-            📦 Build: {}\n\
-            📦 Location: {}\n\
-            📦 GUI: {}\n\
-            📦 Xms: {}\n\
-            📦 Xmx: {}\n\
-            ===================", jar_name, version, build, location, gui, xms, xmx);
+            📦 Jar name: {jar_name}\n\
+            📦 Version: {version}\n\
+            📦 Build: {build}\n\
+            📦 Location: {location}\n\
+            📦 GUI: {gui}\n\
+            📦 Xms: {xms}\n\
+            📦 Xmx: {xmx}\n\
+            ==================="
+        );
     }
 
     pub fn run(&self) -> Result<(), Error> {
         let server_info = self.clone();
         self.print_info();
-        println!("🚀 Starting {} server... {}", self.jar_name, self.location.display());
+        println!(
+            "🚀 Starting {} server... {}",
+            self.jar_name,
+            self.location.display()
+        );
 
         // Find jar in dir
         let jar_name = format!("{}-{}.jar", self.jar_name, self.version);
@@ -75,11 +103,43 @@ impl Server {
         let mut process = Command::new("java")
             .current_dir(&self.location)
             .arg(format!("-Dname={}", server_info.server_name.trim()))
-            .arg(format!("-Xms{}", server_info.xms.unwrap_or_else(|| "1G".to_string())))
-            .arg(format!("-Xmx{}", server_info.xmx.unwrap_or_else(|| "1G".to_string())))
+            .arg(format!(
+                "-Xms{}",
+                server_info.xms.unwrap_or_else(|| "1G".to_string())
+            ))
+            .arg(format!(
+                "-Xmx{}",
+                server_info.xmx.unwrap_or_else(|| "1G".to_string())
+            ))
+            .args([
+                "-XX:+UseG1GC",
+                "-XX:+ParallelRefProcEnabled",
+                "-XX:MaxGCPauseMillis=200",
+            ])
+            .args([
+                "-XX:+UnlockExperimentalVMOptions",
+                "-XX:+DisableExplicitGC",
+                "-XX:+AlwaysPreTouch",
+                "-XX:G1NewSizePercent=30",
+                "-XX:G1MaxNewSizePercent=40",
+                "-XX:G1HeapRegionSize=8M",
+                "-XX:G1ReservePercent=20",
+                "-XX:G1HeapWastePercent=5",
+                "-XX:G1MixedGCCountTarget=4",
+                "-XX:InitiatingHeapOccupancyPercent=15",
+                "-XX:G1MixedGCLiveThresholdPercent=90",
+                "-XX:G1RSetUpdatingPauseTimePercent=5",
+                "-XX:SurvivorRatio=32",
+            ])
+            .args([
+                "-XX:+PerfDisableSharedMem",
+                "-XX:MaxTenuringThreshold=1",
+                "-Dusing.aikars.flags=https://mcflags.emc.gs",
+                "-Daikars.new.flags=true",
+            ])
             .arg("-jar")
             .arg(self.location.join(jar_name))
-            .arg(if !server_info.gui { "--nogui" } else { "" })
+            .arg(if server_info.gui { "" } else { "--nogui" })
             .stdout(Stdio::piped())
             .spawn()
             .expect("Failed to start child");
@@ -98,18 +158,19 @@ impl Server {
                         let server_clone = self.clone();
                         let server_copy = thread::spawn(move || {
                             match server_clone.run() {
-                                Ok(_) => println!("📦 Server started successfully."),
-                                Err(e) => eprintln!("🚨 An error occurred while starting the server: {}", e),
+                                Ok(()) => println!("📦 Server started successfully."),
+                                Err(e) => eprintln!("🚨 An error occurred while starting the server: {e}"),
                             }
                         });
                         server_copy.join().unwrap();
                         break;
-                    } else {
-                        println!("🚨 EULA not accepted! Exiting...");
-                        break;
                     }
+
+                    println!("🚨 EULA not accepted! Exiting...");
+                    break;
                 }
-                println!("{}", text);
+
+                println!("{text}");
             }
         }
 
@@ -146,12 +207,31 @@ impl Server {
                 break;
             }
             let jars = jars::load_jars()?;
-            let jar_name = Select::new("🎚️ Please enter the server Jar", jars.jars.iter().map(|j| j.name.as_str()).collect::<Vec<&str>>()).prompt().expect("😧 Failed to get jar name");
+            let jar_name = Select::new(
+                "🎚️ Please enter the server Jar",
+                jars.jars
+                    .iter()
+                    .map(|j| j.name.as_str())
+                    .collect::<Vec<&str>>(),
+            )
+            .prompt()
+            .expect("😧 Failed to get jar name");
             let jar = jars.get_jar(jar_name).expect("😧 Jar not found");
-            let version = Select::new("🎚️ Please enter the server version", jar.get_versions().unwrap()).prompt().expect("😧 Failed to get jar name");
+            let version = Select::new(
+                "🎚️ Please enter the server version",
+                jar.get_versions().unwrap(),
+            )
+            .prompt()
+            .expect("😧 Failed to get jar name");
             let builds = jar.get_builds(&version).unwrap();
             let latest = builds.first().unwrap();
-            let build = Select::new(&format!("🎚️ Please enter the jar build ({} is latest)", latest), builds).prompt().expect("😧 Failed to get jar build").to_string();
+            let build = Select::new(
+                &format!("🎚️ Please enter the jar build ({} is latest)", latest),
+                builds,
+            )
+            .prompt()
+            .expect("😧 Failed to get jar build")
+            .to_string();
             let server = Server::new(
                 &server_name,
                 jar_name.to_string(),
@@ -179,14 +259,17 @@ impl Server {
             println!("🚨 Plugins directory not found!");
             return Vec::new();
         }
-        dir.read_dir().unwrap().filter_map(|entry| {
-            let name = entry.unwrap().file_name().into_string().unwrap();
-            if name.ends_with(".jar") {
-                Some(name)
-            } else {
-                None
-            }
-        }).collect()
+        dir.read_dir()
+            .unwrap()
+            .filter_map(|entry| {
+                let name = entry.unwrap().file_name().into_string().unwrap();
+                if name.ends_with(".jar") {
+                    Some(name)
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 
     pub fn write(&self) {

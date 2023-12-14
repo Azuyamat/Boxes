@@ -5,6 +5,12 @@ builds_url = "https://api.papermc.io/v2/projects/paper/versions/{version}/"
 versions_url = "https://api.papermc.io/v2/projects/paper"
 
 [[jars]]
+name = "Purpur"
+download_url = "https://api.purpurmc.org/v2/purpur/{version}/{build}/download"
+builds_url = "https://api.purpurmc.org/v2/purpur/{version}?detailed=true"
+versions_url = "https://api.purpurmc.org/v2/purpur"
+
+[[jars]]
 name = "Velocity"
 download_url = "https://api.papermc.io/v2/projects/velocity/versions/{version}/builds/{build}/downloads/velocity-{version}-{build}.jar"
 builds_url = "https://api.papermc.io/v2/projects/velocity/versions/{version}/"

@@ -1,8 +1,10 @@
-use std::fs::File;
-use std::io::{Write};
-use reqwest::blocking::Response;
 use crate::error::Error;
+use reqwest::blocking::Response;
+use serde::{Deserialize, Serialize};
+use std::fs::File;
+use std::io::Write;
 
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub enum Color {
     Black,
     DarkBlue,
@@ -11,6 +13,7 @@ pub enum Color {
     DarkRed,
     DarkPurple,
     Gold,
+    #[default]
     Gray,
     DarkGray,
     Blue,
@@ -20,7 +23,7 @@ pub enum Color {
     LightPurple,
     Yellow,
     White,
-    Reset
+    Reset,
 }
 
 impl Color {
@@ -54,14 +57,16 @@ pub fn colorize(string: &str, color: Color) -> String {
 
 pub fn download(bytes: Response, file: &mut File) {
     println!("🗂️ Preparing to download...");
-    let bytes = bytes.bytes().expect("😧 Failed to get bytes (Check your internet connection)");
+    let bytes = bytes
+        .bytes()
+        .expect("😧 Failed to get bytes (Check your internet connection)");
     let max = bytes.len();
     let chunks = bytes.chunks(4096);
     let mut current = 0;
     for chunk in chunks {
         current += chunk.len();
         let percent = (current as f32 / max as f32) * 100.0;
-        print!("\r🗂️ Downloading... {:.2}%", percent);
+        print!("\r🗂️ Downloading... {percent:.2}%");
         file.write_all(chunk).expect("😧 Failed to write to file");
     }
 }
@@ -75,7 +80,6 @@ macro_rules! get_exec_time {
         format!("{:.2}s", end.as_secs_f32())
     }};
 }
-
 
 pub fn read_line(prompt: &str) -> Result<String, Error> {
     let text = inquire::Text::new(prompt).prompt()?;

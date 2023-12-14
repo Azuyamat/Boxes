@@ -1,12 +1,19 @@
-use std::fmt::Display;
-use std::fs::File;
-use std::path::PathBuf;
-use serde::Deserialize;
+#![warn(
+    clippy::pedantic, 
+    clippy::complexity, 
+    clippy::perf, 
+    clippy::style
+)]
+
 use crate::error::Error;
 use crate::get_exec_time;
 use crate::minecraft::server::Server;
 use crate::utils::colorize;
 use crate::utils::*;
+use serde::Deserialize;
+use std::fmt::Display;
+use std::fs::File;
+use std::path::PathBuf;
 
 const JARS_TOML: &str = include_str!("../../jars.toml");
 
@@ -23,13 +30,17 @@ pub struct JarManager {
 
 impl JarManager {
     pub fn get_jar(&self, name: &str) -> Option<&Jar> {
-        self.jars.iter().find(|jar| jar.name.to_lowercase() == name.to_lowercase())
+        self.jars
+            .iter()
+            .find(|jar| jar.name.to_lowercase() == name.to_lowercase())
     }
 
     pub fn print_info(&self) {
         println!("🗃️ Jar info:");
         println!("  💾 Jars:");
-        if self.jars.is_empty() { println!("      No jars!"); }
+        if self.jars.is_empty() {
+            println!("      No jars!");
+        }
         for jar in &self.jars {
             println!("      ➥ 📦 {}", jar.name);
         }
@@ -51,7 +62,6 @@ pub struct JarProjectInfo {
     pub version_groups: Vec<String>,
     pub versions: Vec<String>,
 }
-
 
 #[derive(Deserialize)]
 pub struct Jar {
@@ -77,26 +87,38 @@ impl Jar {
     }
 
     pub fn get_builds(&self, version: &str) -> Result<Vec<u32>, Error> {
-        let url = self.builds_url.clone()
-            .replace("{version}", version);
+        let url = self.builds_url.clone().replace("{version}", version);
         let response = reqwest::blocking::get(url)?;
         let mut body: JarBuildInfo = response.json()?;
         body.builds.reverse();
         Ok(body.builds)
     }
 
-    pub fn download(&self, version: &str, build: &str, server_name: &str, location: PathBuf) -> Result<Server, Error> {
+    pub fn download(
+        &self,
+        version: &str,
+        build: &str,
+        server_name: &str,
+        location: &PathBuf,
+    ) -> Result<Server, Error> {
         println!("🗂️  Downloading {}...", colorize(&self.name, Color::Green));
         let server: Server;
         let exec_time = get_exec_time!({
-            let download_url = self.download_url.clone()
+            let download_url = self
+                .download_url
+                .clone()
                 .replace("{version}", version)
                 .replace("{build}", build);
-            println!("🗂️  Downloading from {}...", colorize(&download_url, Color::LightPurple));
+            println!(
+                "🗂️  Downloading from {}...",
+                colorize(&download_url, Color::LightPurple)
+            );
             let response = reqwest::blocking::get(&download_url)?;
 
-            let path = std::path::Path::new(&location).join(server_name);
-            if !path.exists() { std::fs::create_dir_all(&path)?; }
+            let path = std::path::Path::new(location).join(server_name);
+            if !path.exists() {
+                std::fs::create_dir_all(&path)?;
+            }
             let mut file = File::create(path.join(format!("{}-{}.jar", self.name, version)))?;
 
             download(response, &mut file);
@@ -109,7 +131,11 @@ impl Jar {
                 path,
             );
         });
-        println!("🗂️  Downloaded {}! ({} elapsed)", colorize(&self.name, Color::Green), colorize(exec_time.as_str(), Color::Yellow));
+        println!(
+            "🗂️  Downloaded {}! ({} elapsed)",
+            colorize(&self.name, Color::Green),
+            colorize(exec_time.as_str(), Color::Yellow)
+        );
         Ok(server)
     }
 
