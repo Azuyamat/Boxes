@@ -1,4 +1,4 @@
-use crate::config_cli::ConfigAction;
+use crate::cli::config_cli::ConfigAction;
 use clap::{Parser, Subcommand};
 
 #[derive(Debug, Parser)]
@@ -6,6 +6,9 @@ use clap::{Parser, Subcommand};
 pub struct Args {
     #[command(subcommand)]
     pub dj: DJ,
+
+    #[clap(short, long)]
+    pub verbose: bool,
 }
 
 #[derive(Subcommand, Debug)]
@@ -50,4 +53,6 @@ pub enum ServerAction {
     Plugins { name: String },
     /// Assign an IP to a server with the given name
     AssignIP { name: String, ip: String },
+    /// Optimize a server with the given name
+    Optimize { name: String },
 }

@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::config::Config;
 use crate::error::Error;
 use crate::minecraft::jars;
+use crate::minecraft::server_manipulator::ServerManipulator;
 use crate::utils::*;
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -208,5 +209,23 @@ impl Server {
         }
         std::fs::remove_file(path).unwrap();
         println!("📝 Removed plugin!");
+    }
+
+    pub fn  optimize(&self, verbose: bool) -> Result<(), Error> {
+        println!("🗂️  Optimizing {} using https://github.com/YouHaveTrouble/minecraft-optimization", colorize(&self.server_name, Color::Gold));
+        let manipulator = ServerManipulator {
+            server: self.clone(),
+        };
+        // server.properties
+        if let Some(mut properties) = manipulator.get_server_properties() {
+            println!("🗂️  Optimizing server.properties...");
+            properties.insert("network-compression-threshold".to_string(), "256".to_string());
+            properties.insert("simulation-distance".to_string(), "4".to_string());
+            properties.insert("view-distance".to_string(), "7".to_string());
+            manipulator.save_server_properties(&properties);
+            println!("🗂️  Optimized server.properties!");
+        }
+
+        Ok(())
     }
 }

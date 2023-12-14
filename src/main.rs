@@ -8,7 +8,6 @@ mod minecraft;
 mod utils;
 mod config;
 mod cli;
-mod config_cli;
 
 use cli::constructor;
 use cli::executor;

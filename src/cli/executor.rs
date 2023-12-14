@@ -7,6 +7,7 @@ use crate::minecraft::jars::load_jars;
 use crate::utils::read_line;
 
 pub(crate) fn execute(args: Args, mut config: Config) -> Result<(), Error> {
+    let verbose = args.verbose;
     match args.dj {
         DJ::Create {
             name,
@@ -38,7 +39,7 @@ pub(crate) fn execute(args: Args, mut config: Config) -> Result<(), Error> {
             server.run()?;
         }
         DJ::Config { action } => {
-            crate::config_cli::manage_config_action(action, &config)?;
+            crate::cli::config_cli::manage_config_action(action, &config)?;
         }
         DJ::Server { action } => match action {
             ServerAction::List => {
@@ -76,11 +77,18 @@ pub(crate) fn execute(args: Args, mut config: Config) -> Result<(), Error> {
                 let manipulator = crate::minecraft::server_manipulator::ServerManipulator {
                     server: server.clone(),
                 };
-                let mut properties = manipulator.get_server_properties();
-                println!("📝 Assigning {}'s IP to {}...", name, ip);
-                properties.insert("server-ip".to_string(), ip.clone());
-                manipulator.save_server_properties(&properties);
-                println!("📝 Assigned {}'s IP to {}!", name, ip);
+                if let Some(mut properties) = manipulator.get_server_properties() {
+                    println!("📝 Assigning {}'s IP to {}...", name, ip);
+                    properties.insert("server-ip".to_string(), ip.clone());
+                    manipulator.save_server_properties(&properties);
+                    println!("📝 Assigned {}'s IP to {}!", name, ip);
+                } else {
+                    eprintln!("Failed to get server properties");
+                }
+            }
+            ServerAction::Optimize { name } => {
+                let server = config.get_server(&name).ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
+                server.optimize(verbose)?;
             }
         },
     }

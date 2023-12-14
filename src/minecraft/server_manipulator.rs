@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::Write;
 use crate::minecraft::server::Server;
 
@@ -7,9 +8,14 @@ pub struct ServerManipulator {
 }
 
 impl ServerManipulator {
-    pub fn get_server_properties(&self) -> std::collections::HashMap<String, String> {
+    pub fn get_server_properties(&self) -> Option<HashMap<String, String>> {
         let mut properties = std::collections::HashMap::new();
-        let file = std::fs::read_to_string(self.server.location.join("server.properties")).unwrap();
+        let path = self.server.location.join("server.properties");
+        if !path.exists() {
+            println!("🚨 server.properties not found!");
+            return None;
+        }
+        let file = std::fs::read_to_string(&path).unwrap();
         for line in file.lines() {
             if line.starts_with('#') { continue; }
             let mut split = line.split('=');
@@ -17,8 +23,9 @@ impl ServerManipulator {
             let value = split.next().unwrap();
             properties.insert(key.to_string(), value.to_string());
         }
-        properties
+        Some(properties)
     }
+
     pub fn save_server_properties(&self, properties: &std::collections::HashMap<String, String>) {
         let mut file = std::fs::File::create(self.server.location.join("server.properties")).unwrap();
         for (key, value) in properties {
