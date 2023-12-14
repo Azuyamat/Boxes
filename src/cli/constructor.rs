@@ -21,18 +21,23 @@ pub enum DJ {
         version: String,
         build: Option<String>,
     },
-    /// Start a server with the given name
+    /// Start an existing server by providing its name
     Start { name: String },
-    /// Config commands
+    /// Commands related to server configuration settings
     Config {
         #[command(subcommand)]
         action: ConfigAction,
     },
-    /// Server commands
+    /// Commands related to server management
     Server {
         #[command(subcommand)]
         action: ServerAction,
     },
+    /// Commands related to theme configuration 
+    Theme {
+        #[command(subcommand)]
+        action: ThemeAction
+    }
 }
 
 #[derive(Subcommand, Debug)]
@@ -55,4 +60,16 @@ pub enum ServerAction {
     AssignIP { name: String, ip: String },
     /// Optimize a server with the given name
     Optimize { name: String },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ThemeAction {
+    /// List all available themes
+    List,
+    /// Create a new theme
+    Create,
+    /// Delete a theme
+    Delete,
+    /// Get info about a theme with the given name
+    Info { name: String }
 }

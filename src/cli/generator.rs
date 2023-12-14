@@ -58,7 +58,8 @@ pub fn prompt_wizard(config: &mut Config) -> Result<(), Error> {
         path = Path::new(&location);
     }
     let server = jar
-        .download(&version, &build, &server_name, path.to_path_buf())?;
+        .download(&version, &build, &server_name, &path.to_path_buf())?;
+    println!("🎛️ Server generated!");
     config.add_server(&server);
     println!("🎛️ Server generated!");
     Ok(())
