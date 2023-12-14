@@ -1,4 +1,4 @@
-# 📦 Boxes `v0.1.x`
+# 📦 Boxes `v0.1.x` [![Rust](https://github.com/Azuyamat/Boxes/actions/workflows/rust.yml/badge.svg)](https://github.com/Azuyamat/Boxes/actions/workflows/rust.yml)
 
 Heyo! I made a cool CLI to manage servers locally and externally. Like it? Consider adding that cool little ⭐. 
 
