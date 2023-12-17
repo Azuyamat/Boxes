@@ -8,7 +8,7 @@ use crate::utils::{download, Color};
 use serde::Deserialize;
 use std::fmt::Display;
 use std::fs::File;
-use std::path::PathBuf;
+use std::path::Path;
 
 const JARS_TOML: &str = include_str!("../../jars.toml");
 
@@ -142,7 +142,7 @@ impl Jar {
         version: &str,
         build: &str,
         server_name: &str,
-        location: &PathBuf,
+        location: &Path,
     ) -> Result<Server, Error> {
         println!("🗂️  Downloading {}...", colorize(&self.name, Color::Green));
         let server: Server;
@@ -157,12 +157,7 @@ impl Jar {
                 colorize(&download_url, Color::LightPurple)
             );
             let response = reqwest::blocking::get(&download_url)?;
-
-            let path = std::path::Path::new(location).join(server_name);
-            if !path.exists() {
-                std::fs::create_dir_all(&path)?;
-            }
-            let mut file = File::create(path.join(format!("{}-{}.jar", self.name, version)))?;
+            let mut file = File::create(location.join(format!("{}-{}.jar", self.name, version)))?;
 
             download(response, &mut file);
 
@@ -171,7 +166,7 @@ impl Jar {
                 self.name.clone(),
                 version.to_string(),
                 build.to_string(),
-                &path,
+                location,
             );
         });
         println!(

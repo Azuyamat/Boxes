@@ -9,10 +9,10 @@
     clippy::complexity
 )]
 
+use crate::cli::config_cli;
 use crate::cli::constructor::{Args, ServerAction, DJ};
 use crate::cli::generator;
 use crate::config::Config;
-use crate::cli::config_cli;
 use crate::error::Error;
 use crate::minecraft::jars::load;
 use crate::minecraft::server::Server;
@@ -52,7 +52,7 @@ pub(crate) fn execute(args: Args, mut config: Config, theme: &Theme) -> Result<(
                 location = read_line("🎚️ Please enter the server location:")?;
                 path = Path::new(&location);
             }
-            let server = jar.download(&version, &build, &name, &path.to_path_buf())?;
+            let server = jar.download(&version, &build, &name, path)?;
             config.add_server(&server);
         }
         DJ::Start { name } => {
@@ -67,12 +67,16 @@ pub(crate) fn execute(args: Args, mut config: Config, theme: &Theme) -> Result<(
 
         // Actions
         DJ::Server { action } => handle_server_action(action, &mut config, verbose)?,
-        DJ::Theme { action } => handle_theme_action(action, verbose)
+        DJ::Theme { action } => handle_theme_action(action, verbose),
     }
     Ok(())
 }
 
-fn handle_server_action(action: ServerAction, config: &mut Config, verbose: bool) -> Result<(), Error> {
+fn handle_server_action(
+    action: ServerAction,
+    config: &mut Config,
+    verbose: bool,
+) -> Result<(), Error> {
     match action {
         ServerAction::List => {
             config.print_info()?;
@@ -145,13 +149,13 @@ fn handle_theme_action(action: ThemeAction, verbose: bool) {
     match action {
         ThemeAction::List => {
             todo!()
-        },
+        }
         ThemeAction::Create => {
             todo!()
-        },
+        }
         ThemeAction::Delete => {
             todo!()
-        },
+        }
         ThemeAction::Info { name } => {
             todo!()
         }
