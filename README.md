@@ -81,4 +81,4 @@ Assign an IP to a server:
 
 ## License
 
-This product is available under the [MIT licence](https://opensource.org/licenses/MIT).
+This product is available under the [MIT license](https://opensource.org/licenses/MIT).
