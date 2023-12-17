@@ -7,18 +7,18 @@
     clippy::complexity
 )]
 
-use std::ffi::OsString;
 use crate::config::Config;
 use crate::error::Error;
-use crate::minecraft::jars;
-use crate::utils::{colorize, Color, read_line};
-use inquire::Select;
+use crate::minecraft::server_manipulator::ServerManipulator;
+use crate::utils::{canonize, colorize, read_line, Color};
 use serde::{Deserialize, Serialize};
+use std::ffi::OsString;
+use std::fs::read_dir;
 use std::io::{BufRead, BufReader};
+use std::ops::Add;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::thread;
-use crate::minecraft::server_manipulator::ServerManipulator;
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Server {
@@ -90,7 +90,7 @@ impl Server {
         );
     }
 
-    pub fn run(&self, accept_eula: bool) -> Result<(), Error> {
+    pub fn run(&mut self, accept_eula: bool) -> Result<(), Error> {
         let server_info = self.clone();
         self.print_info();
         println!(
@@ -100,7 +100,11 @@ impl Server {
         );
 
         // Find jar in dir
-        let jar_name = format!("{}-{}.jar", self.jar_name, self.version);
+        let mut jar_name = self.jar_name.clone();
+        if &self.version != "Unknown" {
+            jar_name = jar_name.add("-").add(&*self.version);
+        }
+        jar_name = jar_name.add(".jar");
 
         // Run jar
         let mut process = Command::new("java")
@@ -143,7 +147,7 @@ impl Server {
             .arg("-jar")
             .arg(self.location.join(jar_name))
             .arg(if server_info.gui { "" } else { "--nogui" })
-            .stdout(Stdio::piped())
+            .stdout(Stdio::inherit())
             .spawn()
             .expect("Failed to start child");
 
@@ -155,7 +159,7 @@ impl Server {
                 if text.contains("You need to agree to the EULA in order to run the server. Go to eula.txt for more info.") {
                     if accept_eula {
                         self.accept_eula();
-                        let server_clone = self.clone();
+                        let mut server_clone = self.clone();
                         let server_copy = thread::spawn(move || server_clone.run(false)); // Create
                         // thread so we can get "out" of the loop
                         server_copy.join().unwrap()?;
@@ -166,7 +170,7 @@ impl Server {
                         println!("🛑 Stopping server");
                         process.kill().expect("Failed to kill child");
                         self.accept_eula();
-                        let server_clone = self.clone();
+                        let mut server_clone = self.clone();
                         let server_copy = thread::spawn(move || server_clone.run(false)); // Create
                         // thread so we can get "out" of the loop
                         server_copy.join().unwrap()?;
@@ -200,52 +204,27 @@ impl Server {
 
     pub fn from_path(path: &str) -> Result<Self, Error> {
         let path = PathBuf::from(path);
+        let path = canonize(&path)?;
+        if !path.is_dir() {
+            return Err(Error::ResourceNotFound(
+                "Server directory not found".to_string(),
+            ));
+        }
         let server_info = path.join("server_box.toml");
         if !server_info.exists() {
+            let jars = get_jars(&path)?;
+            let jar = jars
+                .first()
+                .ok_or(Error::ResourceNotFound("Jar not found".to_string()))?;
+            let jar = jar.to_str().unwrap();
+            let jar = jar.replace(".jar", "");
+            let split_jar = jar.split('-').collect::<Vec<&str>>();
+            let jar_name = (*split_jar.first().unwrap_or(&"Unknown")).to_string();
+            let version = (*split_jar.get(1).unwrap_or(&"Unknown")).to_string();
             let config = Config::load()?;
             println!("🚨 Server info not found!");
-            let mut server_name;
-            loop {
-                server_name = read_line("🎚️ Please enter the server name:")?;
-                if config.get_server(&server_name).is_some() {
-                    println!("⚠️ A server with the same name already exists! Please enter a different name:");
-                    continue;
-                }
-                break;
-            }
-            let jars = jars::load()?;
-            let jar_name = Select::new(
-                "🎚️ Please enter the server Jar",
-                jars.jars
-                    .iter()
-                    .map(|j| j.name.as_str())
-                    .collect::<Vec<&str>>(),
-            )
-            .prompt()
-            .expect("😧 Failed to get jar name");
-            let jar = jars.get_jar(jar_name).expect("😧 Jar not found");
-            let version = Select::new(
-                "🎚️ Please enter the server version",
-                jar.get_versions().unwrap(),
-            )
-            .prompt()
-            .expect("😧 Failed to get jar name");
-            let builds = jar.get_builds(&version).unwrap();
-            let latest = builds.first().unwrap();
-            let build = Select::new(
-                &format!("🎚️ Please enter the jar build ({latest} is latest)"),
-                builds,
-            )
-            .prompt()
-            .expect("😧 Failed to get jar build")
-            .to_string();
-            let server = Server::new(
-                &server_name,
-                jar_name.to_string(),
-                version,
-                build,
-                &path,
-            );
+            let server_name = path.file_name().unwrap().to_str().unwrap();
+            let server = Server::new(server_name, jar_name, version, "Unknown".to_string(), &path);
             server.write();
             return Ok(server);
         }
@@ -266,20 +245,7 @@ impl Server {
             println!("🚨 Plugins directory not found!");
             return Vec::new();
         }
-        dir.read_dir()
-            .unwrap()
-            .filter_map(|entry| {
-                if let Ok(entry) = entry {
-                    if Path::new(&entry.path()).extension().unwrap_or_default() == "jar" {
-                        Some(entry.file_name())
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            })
-            .collect()
+        get_jars(&dir).unwrap()
     }
 
     pub fn write(&self) {
@@ -303,19 +269,40 @@ impl Server {
         println!("📝 Removed plugin!");
     }
 
-    pub fn  optimize(&self, verbose: bool) {
-        println!("🗂️  Optimizing {} using https://github.com/YouHaveTrouble/minecraft-optimization", colorize(&self.server_name, Color::Gold));
+    pub fn optimize(&self, verbose: bool) {
+        println!(
+            "🗂️  Optimizing {} using https://github.com/YouHaveTrouble/minecraft-optimization",
+            colorize(&self.server_name, Color::Gold)
+        );
         let manipulator = ServerManipulator {
             server: self.clone(),
         };
         // server.properties
         if let Some(mut properties) = manipulator.get_server_properties() {
             println!("🗂️  Optimizing server.properties...");
-            properties.insert("network-compression-threshold".to_string(), "256".to_string());
+            properties.insert(
+                "network-compression-threshold".to_string(),
+                "256".to_string(),
+            );
             properties.insert("simulation-distance".to_string(), "4".to_string());
             properties.insert("view-distance".to_string(), "7".to_string());
             manipulator.save_server_properties(&properties);
             println!("🗂️  Optimized server.properties!");
         }
     }
+}
+
+fn get_jars(path: &Path) -> Result<Vec<OsString>, Error> {
+    let mut jars = vec![];
+    for entry in read_dir(path)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_dir() {
+            continue;
+        }
+        if path.extension().unwrap_or_default() == "jar" {
+            jars.push(entry.file_name());
+        }
+    }
+    Ok(jars)
 }

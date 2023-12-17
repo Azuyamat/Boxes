@@ -1,8 +1,10 @@
 use crate::error::Error;
 use reqwest::blocking::Response;
 use serde::{Deserialize, Serialize};
+use std::fs;
 use std::fs::File;
 use std::io::Write;
+use std::path::{Path, PathBuf};
 
 #[derive(Serialize, Deserialize, Clone, Default)]
 pub enum Color {
@@ -84,4 +86,11 @@ macro_rules! get_exec_time {
 pub fn read_line(prompt: &str) -> Result<String, Error> {
     let text = inquire::Text::new(prompt).prompt()?;
     Ok(text)
+}
+
+pub fn canonize(path: &Path) -> Result<PathBuf, Error> {
+    let full_path = fs::canonicalize(path)?;
+    let full_path = full_path.to_str().unwrap().trim_start_matches("\\\\?\\");
+    let full_path = PathBuf::from(full_path);
+    Ok(full_path)
 }

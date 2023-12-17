@@ -33,11 +33,11 @@ pub enum DJ {
         #[command(subcommand)]
         action: ServerAction,
     },
-    /// Commands related to theme configuration 
+    /// Commands related to theme configuration
     Theme {
         #[command(subcommand)]
-        action: ThemeAction
-    }
+        action: ThemeAction,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -60,6 +60,8 @@ pub enum ServerAction {
     AssignIP { name: String, ip: String },
     /// Optimize a server with the given name
     Optimize { name: String },
+    /// Import existing servers from a directory
+    Import { location: String },
 }
 
 #[derive(Subcommand, Debug)]
@@ -71,5 +73,5 @@ pub enum ThemeAction {
     /// Delete a theme
     Delete,
     /// Get info about a theme with the given name
-    Info { name: String }
+    Info { name: String },
 }

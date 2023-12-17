@@ -98,8 +98,8 @@ impl Config {
         Ok(())
     }
 
-    pub fn add_server(&mut self, server: &Server) {
-        println!("📝 Adding server to config...");
+    pub fn add_server(&mut self, server: &Server, save: bool) {
+        println!("📝 Adding server to config... {}", server.server_name);
         if self.servers.iter().any(|s| s.location == server.location) {
             println!("⚠️ A server with the same location already exists! Overriding...");
             self.servers.remove(
@@ -113,7 +113,9 @@ impl Config {
         }
         let server_info = ServerInfo::from_server(server);
         self.servers.push(server_info);
-        confy::store("boxes", None, self).expect("🚨 Config file could not be saved!");
+        if save {
+            confy::store("boxes", None, self).expect("🚨 Config file could not be saved!");
+        }
         println!("📝 Added server to config!");
     }
 

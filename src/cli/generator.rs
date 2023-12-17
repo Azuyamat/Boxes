@@ -1,7 +1,7 @@
 use crate::config::Config;
 use crate::error::Error;
 use crate::minecraft::jars::load;
-use crate::utils::read_line;
+use crate::utils::{canonize, read_line};
 use inquire::Select;
 use std::fs;
 use std::path::Path;
@@ -70,12 +70,10 @@ pub fn prompt_wizard(config: &mut Config) -> Result<(), Error> {
         location = read_line("🎚️ Please enter the server location:")?;
         path = Path::new(&location);
     }
-    let full_path = fs::canonicalize(path)?;
-    let full_path = full_path.to_str().unwrap().trim_start_matches("\\\\?\\");
-    let full_path = Path::new(full_path);
-    let server = jar.download(&version, &build, &server_name, full_path)?;
+    let full_path = canonize(path)?;
+    let server = jar.download(&version, &build, &server_name, full_path.as_path())?;
     println!("🎛️ Server generated!");
-    config.add_server(&server);
+    config.add_server(&server, true);
     println!("🎛️ Server generated!");
     Ok(())
 }
