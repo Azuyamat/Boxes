@@ -122,7 +122,7 @@ impl Jar {
         let response = reqwest::blocking::get(url)?;
         let lower_name = self.name.to_lowercase();
         let mut builds: Vec<u32>;
-        if &lower_name == "paper" {
+        if &lower_name == "paper" || &lower_name == "waterfall" || &lower_name == "velocity" {
             let mut body = response.json::<PaperJarBuildInfo>()?;
             builds = body.get_builds()?;
         } else if &lower_name == "purpur" {

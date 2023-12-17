@@ -59,7 +59,7 @@ pub(crate) fn execute(args: Args, mut config: Config, theme: &Theme) -> Result<(
             let server = config
                 .get_server(&name)
                 .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
-            server.run()?;
+            server.run(false)?;
         }
         DJ::Config { action } => {
             config_cli::manage_config_action(action, &config)?;
@@ -94,7 +94,7 @@ fn handle_server_action(
             let server = config
                 .get_server(&name)
                 .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
-            server.run()?;
+            server.run(false)?;
         }
         ServerAction::Delete { name } => {
             let server = config

@@ -9,6 +9,7 @@ mod error;
 mod minecraft;
 mod themes;
 mod utils;
+mod tests;
 
 use cli::constructor;
 use cli::executor;

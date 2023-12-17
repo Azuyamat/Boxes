@@ -50,7 +50,7 @@ impl Server {
             version,
             build,
             location: location.to_path_buf(),
-            gui: false,
+            gui: true,
             xms: None,
             xmx: None,
         };
@@ -90,7 +90,7 @@ impl Server {
         );
     }
 
-    pub fn run(&self) -> Result<(), Error> {
+    pub fn run(&self, accept_eula: bool) -> Result<(), Error> {
         let server_info = self.clone();
         self.print_info();
         println!(
@@ -153,13 +153,22 @@ impl Server {
             for line in reader.lines() {
                 let text = line.unwrap();
                 if text.contains("You need to agree to the EULA in order to run the server. Go to eula.txt for more info.") {
+                    if accept_eula {
+                        self.accept_eula();
+                        let server_clone = self.clone();
+                        let server_copy = thread::spawn(move || server_clone.run(false)); // Create
+                        // thread so we can get "out" of the loop
+                        server_copy.join().unwrap()?;
+                        break;
+                    }
                     let input = read_line("🚨 EULA not accepted! Would you like to accept? (y/n)")?.to_lowercase();
                     if input == "y" {
                         println!("🛑 Stopping server");
                         process.kill().expect("Failed to kill child");
                         self.accept_eula();
                         let server_clone = self.clone();
-                        let server_copy = thread::spawn(move || server_clone.run()); // Create thread so we can get "out" of the loop
+                        let server_copy = thread::spawn(move || server_clone.run(false)); // Create
+                        // thread so we can get "out" of the loop
                         server_copy.join().unwrap()?;
                         break;
                     }
