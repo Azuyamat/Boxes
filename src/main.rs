@@ -6,9 +6,10 @@ use clap::Parser;
 mod cli;
 mod config;
 mod error;
-mod minecraft;
 mod themes;
 mod utils;
+
+#[cfg(test)]
 mod tests;
 
 use cli::constructor;

@@ -8,9 +8,8 @@
 )]
 
 use crate::error::Error;
-use crate::minecraft::jars;
-use crate::minecraft::server::Server;
 use crate::utils::{colorize, Color};
+use notch::servers::server::Server;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
@@ -30,7 +29,7 @@ pub struct ServerInfo {
 impl ServerInfo {
     pub fn from_server(server: &Server) -> Self {
         Self {
-            server_name: server.server_name.clone(),
+            server_name: server.name.clone(),
             location: server.location.clone(),
         }
     }
@@ -60,7 +59,7 @@ impl Config {
                 running
             );
         }
-        jars::load().unwrap().print_info();
+        //TODO: Print jars info
         Ok(())
     }
 
@@ -99,7 +98,7 @@ impl Config {
     }
 
     pub fn add_server(&mut self, server: &Server, save: bool) {
-        println!("📝 Adding server to config... {}", server.server_name);
+        println!("📝 Adding server to config... {}", server.name);
         if self.servers.iter().any(|s| s.location == server.location) {
             println!("⚠️ A server with the same location already exists! Overriding...");
             self.servers.remove(
@@ -123,9 +122,9 @@ impl Config {
         let server_info = self
             .servers
             .iter()
-            .find(|s| s.server_name.to_lowercase() == server_name.to_lowercase())?;
-        let location_str = server_info.location.to_str()?;
-        Server::from_path(location_str).ok()
+            .find(|s| s.server_name.eq_ignore_ascii_case(server_name))?;
+        let location = &server_info.location;
+        Server::from_path(location).ok()
     }
 
     pub fn save_server(&mut self, server: &Server) -> Result<(), Error> {
@@ -133,7 +132,7 @@ impl Config {
         let index = self
             .servers
             .iter()
-            .position(|s| s.server_name == server.server_name)
+            .position(|s| s.server_name == server.name)
             .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
         self.servers.remove(index);
         let server_info = ServerInfo::from_server(server);

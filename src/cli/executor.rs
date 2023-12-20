@@ -9,21 +9,24 @@
     clippy::complexity
 )]
 
-use crate::cli::config_cli;
 use crate::cli::constructor::{Args, ServerAction, DJ};
 use crate::cli::generator;
+use crate::cli::{config_cli, print_server_info};
 use crate::config::Config;
 use crate::error::Error;
-use crate::minecraft::jars::load;
-use crate::minecraft::server::Server;
-use crate::minecraft::server_manipulator::ServerManipulator;
 use crate::themes::theme::Theme;
 use crate::utils::read_line;
+use notch::jars::jar::Jar;
+use notch::jars::manager::JarManager;
+use notch::servers::downloader::Downloader;
+use notch::servers::runner::Runner;
+use notch::servers::server::Server;
+use std::io::BufRead;
 use std::path::Path;
 
 use super::constructor::ThemeAction;
 
-pub(crate) fn execute(args: Args, mut config: Config, theme: &Theme) -> Result<(), Error> {
+pub fn execute(args: Args, mut config: Config, theme: &Theme) -> Result<(), Error> {
     let verbose = args.verbose;
     match args.dj {
         DJ::Create {
@@ -35,16 +38,11 @@ pub(crate) fn execute(args: Args, mut config: Config, theme: &Theme) -> Result<(
         } => {
             // Print with emoji
             println!("🔥 Creating server...");
-            let jars = load()?;
-            let jar = jars
-                .get_jar(&jar)
-                .ok_or(Error::ResourceNotFound("Jar not found".to_string()))?;
-            let build = match build {
-                Some(build) => build,
-                None => jar
-                    .get_latest_build(version.as_str())
-                    .ok_or(Error::ResourceNotFound("Jar build not found".to_string()))?
-                    .to_string(),
+            let jars = JarManager::load()?;
+            let jar = jars.get_jar(jar)?;
+            let build: u32 = match build {
+                Some(build) => build.parse::<u32>().unwrap(),
+                None => jar.get_latest_build(version.clone())?,
             };
             let mut path = Path::new(&location);
             while !path.exists() {
@@ -52,14 +50,29 @@ pub(crate) fn execute(args: Args, mut config: Config, theme: &Theme) -> Result<(
                 location = read_line("🎚️ Please enter the server location:")?;
                 path = Path::new(&location);
             }
-            let server = jar.download(&version, &build, &name, path)?;
+            let jar = Jar {
+                name: jar.name.clone(),
+                version: Some(version),
+                build: Some(build),
+            };
+            let server = Server::new(name, jar, path.to_path_buf())?;
+            let downloader = Downloader::new(&server);
+            downloader.download()?;
             config.add_server(&server, true);
         }
         DJ::Start { name } => {
-            let mut server = config
+            let server = config
                 .get_server(&name)
                 .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
-            server.run(false)?;
+            let mut runner = Runner::new(&server, vec![], vec![]);
+            runner.start()?;
+
+            // Reader
+            let mut child = runner
+                .child
+                .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
+            let status = child.wait()?;
+            println!("📝 Server exited with status: {status}");
         }
         DJ::Config { action } => {
             config_cli::manage_config_action(action, &config)?;
@@ -88,88 +101,97 @@ fn handle_server_action(
             let server = config
                 .get_server(&name)
                 .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
-            server.print_info();
+            print_server_info(&server);
         }
         ServerAction::Start { name } => {
-            let mut server = config
+            let server = config
                 .get_server(&name)
                 .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
-            server.run(false)?;
+            let mut runner = Runner::new(&server, vec![], vec![]);
+            let mut child = runner.start()?;
+
+            let status = child.wait()?;
+            println!("📝 Server exited with status: {status}");
         }
         ServerAction::Delete { name } => {
             let server = config
                 .get_server(&name)
                 .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
-            server.delete();
+            server.delete()?;
         }
         ServerAction::Add { location } => {
-            let server = Server::from_path(&location)?;
-            config.add_server(&server, true);
+            todo!("Add server")
+            // let server = Server::from_path(&location)?;
+            // config.add_server(&server, true);
         }
         ServerAction::Plugins { name } => {
-            let server = config
-                .get_server(&name)
-                .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
-            let plugins = server.plugins();
-            println!(
-                "📝 Getting plugins for {} ({} plugin(s))...",
-                name,
-                plugins.len()
-            );
-            for plugin in plugins {
-                let plugin = plugin.to_string_lossy().to_string();
-                println!(" - {plugin}");
-            }
+            todo!("Plugins")
+            // let server = config
+            //     .get_server(&name)
+            //     .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
+            // let plugins = server.plugins();
+            // println!(
+            //     "📝 Getting plugins for {} ({} plugin(s))...",
+            //     name,
+            //     plugins.len()
+            // );
+            // for plugin in plugins {
+            //     let plugin = plugin.to_string_lossy().to_string();
+            //     println!(" - {plugin}");
+            // }
         }
         ServerAction::AssignIP { name, ip } => {
-            let server = config
-                .get_server(&name)
-                .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
-            let manipulator = ServerManipulator {
-                server: server.clone(),
-            };
-            if let Some(mut properties) = manipulator.get_server_properties() {
-                println!("📝 Assigning {name}'s IP to {ip}...");
-                properties.insert("server-ip".to_string(), ip.clone());
-                manipulator.save_server_properties(&properties);
-                println!("📝 Assigned {name}'s IP to {ip}!");
-            }
+            todo!("Assign IP")
+            // let server = config
+            //     .get_server(&name)
+            //     .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
+            // let manipulator = ServerManipulator {
+            //     server: server.clone(),
+            // };
+            // if let Some(mut properties) = manipulator.get_server_properties() {
+            //     println!("📝 Assigning {name}'s IP to {ip}...");
+            //     properties.insert("server-ip".to_string(), ip.clone());
+            //     manipulator.save_server_properties(&properties);
+            //     println!("📝 Assigned {name}'s IP to {ip}!");
+            // }
         }
         ServerAction::Optimize { name } => {
-            let server = config
-                .get_server(&name)
-                .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
-            server.optimize(verbose);
+            todo!("Optimize")
+            // let server = config
+            //     .get_server(&name)
+            //     .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
+            // server.optimize(verbose);
         }
         ServerAction::Import { location } => {
-            let path = Path::new(&location);
-            if !path.exists() {
-                return Err(Error::ResourceNotFound("Path does not exist".to_string()));
-            }
-            println!("📝 Importing servers from {location}...");
-            for entry in path.read_dir()? {
-                let entry = entry?;
-                let path = entry.path();
-                if !path.is_dir() {
-                    continue;
-                }
-                let Ok(server) = Server::from_path(path.to_str().unwrap()) else {
-                    println!(
-                        "⚠️ Failed to create server from path {}",
-                        path.to_str().unwrap()
-                    );
-                    return Err(Error::ResourceNotFound(
-                        "⚠️ Failed to create server from path".to_string(),
-                    ));
-                };
-                if config.get_server(&server.server_name).is_some() {
-                    println!("😒 Skipping {}, it already exists.", server.server_name);
-                    continue;
-                }
-                config.add_server(&server, true);
-            }
-            confy::store("boxes", None, config).expect("🚨 Config file could not be saved!");
-            println!("📝 Imported servers from {location}!");
+            todo!("Import server")
+            // let path = Path::new(&location);
+            // if !path.exists() {
+            //     return Err(Error::ResourceNotFound("Path does not exist".to_string()));
+            // }
+            // println!("📝 Importing servers from {location}...");
+            // for entry in path.read_dir()? {
+            //     let entry = entry?;
+            //     let path = entry.path();
+            //     if !path.is_dir() {
+            //         continue;
+            //     }
+            //     let Ok(server) = Server::from_path(path.to_str().unwrap()) else {
+            //         println!(
+            //             "⚠️ Failed to create server from path {}",
+            //             path.to_str().unwrap()
+            //         );
+            //         return Err(Error::ResourceNotFound(
+            //             "⚠️ Failed to create server from path".to_string(),
+            //         ));
+            //     };
+            //     if config.get_server(&server.server_name).is_some() {
+            //         println!("😒 Skipping {}, it already exists.", server.server_name);
+            //         continue;
+            //     }
+            //     config.add_server(&server, true);
+            // }
+            // confy::store("boxes", None, config).expect("🚨 Config file could not be saved!");
+            // println!("📝 Imported servers from {location}!");
         }
     }
     Ok(())

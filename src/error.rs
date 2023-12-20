@@ -15,4 +15,6 @@ pub enum Error {
 
     #[error("🚨 Resource not found: {0}")]
     ResourceNotFound(String),
+    #[error("Notch error")]
+    Notch(#[from] notch::error::Error),
 }
