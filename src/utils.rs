@@ -3,8 +3,11 @@ use reqwest::blocking::Response;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::fs::File;
-use std::io::Write;
+use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
+use inquire::Confirm;
+use notch::servers::runner::Runner;
+use notch::servers::server::Server;
 
 #[derive(Serialize, Deserialize, Clone, Default)]
 pub enum Color {
@@ -93,4 +96,43 @@ pub fn canonize(path: &Path) -> Result<PathBuf, Error> {
     let full_path = full_path.to_str().unwrap().trim_start_matches("\\\\?\\");
     let full_path = PathBuf::from(full_path);
     Ok(full_path)
+}
+
+pub fn start_server(server: &Server) -> Result<(), Error> {
+    let mut runner = Runner::new(server, vec![], vec![]);
+    let mut child = runner.start()?;
+
+    // Reader
+    if let Some(ref mut stdout) = child.stdout {
+        let reader = std::io::BufReader::new(stdout);
+        for line in reader.lines() {
+            let text = line.unwrap();
+            let text = text
+                .escape_default()
+                .to_string();
+
+            // Remove [HH:MM:SS] from text
+            let text = text.split(' ').collect::<Vec<&str>>();
+            let time = text[0..2].join(" ");
+            let text = text[2..].join(" ");
+            if text.starts_with("You need to agree to the EULA in order to run the server.") {
+                println!("🚨 You need to agree to the EULA in order to run the server.");
+
+                // Prompt for Y/N (default: N)
+                let answer = Confirm::new("🎚️ Do you want to agree to the EULA? (Y/N)").prompt()?;
+                if answer {
+                    server.accept_eula()?;
+                    println!("🎚️ EULA accepted! You can now start the server.");
+                } else {
+                    println!("🎚️ EULA not accepted!");
+                }
+                break;
+            }
+
+            println!("{time} {text}");
+        }
+    }
+
+    let status = child.wait()?;
+    Ok(())
 }

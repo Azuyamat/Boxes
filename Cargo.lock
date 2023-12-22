@@ -812,9 +812,9 @@ dependencies = [
 
 [[package]]
 name = "notch"
-version = "0.1.5"
+version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fe4a07d45c3da92a11b63e7c92f96e9206b8688139aa43a8b1fb24afaf6ea87"
+checksum = "bf3a7e49c5997cca20c7f8d408c1d4adcf3e7903b1f1bca26329176f978066dc"
 dependencies = [
  "reqwest",
  "serde",

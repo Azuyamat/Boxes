@@ -141,4 +141,17 @@ impl Config {
         println!("📝 Saved server to config!");
         Ok(())
     }
+
+    pub fn remove_server(&mut self, server_name: &str) -> Result<(), Error> {
+        println!("📝 Removing server from config...");
+        let index = self
+            .servers
+            .iter()
+            .position(|s| s.server_name == server_name)
+            .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
+        self.servers.remove(index);
+        confy::store("boxes", None, self)?;
+        println!("📝 Removed server from config!");
+        Ok(())
+    }
 }

@@ -19,4 +19,4 @@ blocking = "1.5.1"
 confy = "0.5.1"
 clap = { version = "4.4.11", features = ["derive"] }
 inquire = "0.6.2"
-notch = "0.1.5"
+notch = "0.1.6"

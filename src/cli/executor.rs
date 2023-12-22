@@ -15,13 +15,11 @@ use crate::cli::{config_cli, print_server_info};
 use crate::config::Config;
 use crate::error::Error;
 use crate::themes::theme::Theme;
-use crate::utils::read_line;
+use crate::utils::{read_line, start_server};
 use notch::jars::jar::Jar;
 use notch::jars::manager::JarManager;
 use notch::servers::downloader::Downloader;
-use notch::servers::runner::Runner;
 use notch::servers::server::Server;
-use std::io::BufRead;
 use std::path::Path;
 
 use super::constructor::ThemeAction;
@@ -64,15 +62,7 @@ pub fn execute(args: Args, mut config: Config, theme: &Theme) -> Result<(), Erro
             let server = config
                 .get_server(&name)
                 .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
-            let mut runner = Runner::new(&server, vec![], vec![]);
-            runner.start()?;
-
-            // Reader
-            let mut child = runner
-                .child
-                .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
-            let status = child.wait()?;
-            println!("📝 Server exited with status: {status}");
+            start_server(&server)?;
         }
         DJ::Config { action } => {
             config_cli::manage_config_action(action, &config)?;
@@ -107,11 +97,7 @@ fn handle_server_action(
             let server = config
                 .get_server(&name)
                 .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
-            let mut runner = Runner::new(&server, vec![], vec![]);
-            let mut child = runner.start()?;
-
-            let status = child.wait()?;
-            println!("📝 Server exited with status: {status}");
+            start_server(&server)?;
         }
         ServerAction::Delete { name } => {
             let server = config
@@ -119,10 +105,16 @@ fn handle_server_action(
                 .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
             server.delete()?;
         }
+        ServerAction::Remove { name } => {
+            config.remove_server(&name)?;
+        }
         ServerAction::Add { location } => {
-            todo!("Add server")
-            // let server = Server::from_path(&location)?;
-            // config.add_server(&server, true);
+            let location = Path::new(&location);
+            if !location.exists() || location.is_relative() {
+                return Err(Error::ResourceNotFound("Path does not exist".to_string()));
+            }
+            let server = Server::from_path(&location.to_path_buf())?;
+            config.add_server(&server, true);
         }
         ServerAction::Plugins { name } => {
             todo!("Plugins")

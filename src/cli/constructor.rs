@@ -62,6 +62,8 @@ pub enum ServerAction {
     Optimize { name: String },
     /// Import existing servers from a directory
     Import { location: String },
+    /// Remove a server with the given name from the config
+    Remove { name: String },
 }
 
 #[derive(Subcommand, Debug)]
