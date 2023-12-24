@@ -9,7 +9,8 @@
     clippy::complexity
 )]
 
-use crate::cli::constructor::{Args, ServerAction, DJ};
+use std::env::current_dir;
+use crate::cli::constructor::{Args, ServerAction, DJ, ServerPluginAction};
 use crate::cli::generator;
 use crate::cli::{config_cli, print_server_info};
 use crate::config::Config;
@@ -20,6 +21,8 @@ use notch::jars::jar::Jar;
 use notch::jars::manager::JarManager;
 use notch::servers::downloader::Downloader;
 use notch::servers::server::Server;
+use notch::servers::manipulator::Manipulator;
+use notch::hangar::{fetch_plugins, HangarProject};
 use std::path::Path;
 
 use super::constructor::ThemeAction;
@@ -42,18 +45,21 @@ pub fn execute(args: Args, mut config: Config, theme: &Theme) -> Result<(), Erro
                 Some(build) => build.parse::<u32>().unwrap(),
                 None => jar.get_latest_build(version.clone())?,
             };
-            let mut path = Path::new(&location);
+            let mut path = Path::new(&location).to_path_buf();
             while !path.exists() {
                 println!("🚨 Path does not exist!");
                 location = read_line("🎚️ Please enter the server location:")?;
-                path = Path::new(&location);
+                path = Path::new(&location).to_path_buf();
+            }
+            if path.is_relative() {
+                path = current_dir()?.join(path);
             }
             let jar = Jar {
                 name: jar.name.clone(),
                 version: Some(version),
                 build: Some(build),
             };
-            let server = Server::new(name, jar, path.to_path_buf())?;
+            let server = Server::new(name, jar, path)?;
             let downloader = Downloader::new(&server);
             downloader.download()?;
             config.add_server(&server, true);
@@ -113,77 +119,70 @@ fn handle_server_action(
             if !location.exists() || location.is_relative() {
                 return Err(Error::ResourceNotFound("Path does not exist".to_string()));
             }
-            let server = Server::from_path(&location.to_path_buf())?;
+            let server = Server::from_path(location)?;
             config.add_server(&server, true);
         }
-        ServerAction::Plugins { name } => {
-            todo!("Plugins")
-            // let server = config
-            //     .get_server(&name)
-            //     .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
-            // let plugins = server.plugins();
-            // println!(
-            //     "📝 Getting plugins for {} ({} plugin(s))...",
-            //     name,
-            //     plugins.len()
-            // );
-            // for plugin in plugins {
-            //     let plugin = plugin.to_string_lossy().to_string();
-            //     println!(" - {plugin}");
-            // }
+        ServerAction::Plugins { action } => handle_server_plugin_action(action, config)?,
+    }
+    Ok(())
+}
+
+fn handle_server_plugin_action(action: ServerPluginAction, config: &Config) -> Result<(), Error> {
+    match action {
+        ServerPluginAction::List { name } => {
+            let server = config
+                .get_server(&name)
+                .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
+            let manipulator = Manipulator::new(&server);
+            let plugins = manipulator.plugins()?;
+            println!("📃 Plugins for {} ({}) :", server.name, plugins.len());
+            if plugins.is_empty() {
+                println!(" - No plugins found");
+            }
+            for plugin in plugins {
+                println!(" - {plugin}");
+            }
         }
-        ServerAction::AssignIP { name, ip } => {
-            todo!("Assign IP")
-            // let server = config
-            //     .get_server(&name)
-            //     .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
-            // let manipulator = ServerManipulator {
-            //     server: server.clone(),
-            // };
-            // if let Some(mut properties) = manipulator.get_server_properties() {
-            //     println!("📝 Assigning {name}'s IP to {ip}...");
-            //     properties.insert("server-ip".to_string(), ip.clone());
-            //     manipulator.save_server_properties(&properties);
-            //     println!("📝 Assigned {name}'s IP to {ip}!");
-            // }
+        ServerPluginAction::Add { name, plugin } => {
+            let server = config
+                .get_server(&name)
+                .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
+            let manipulator = Manipulator::new(&server);
+            let plugins = fetch_plugins(&plugin)?;
+
+            // Make a select menu with inquire for the user to select a plugin
+            let plugins_select = plugins
+                .iter()
+                .map(|plugin| plugin.name.clone())
+                .collect::<Vec<String>>();
+            if plugins_select.is_empty() {
+                println!("🚨 No plugins found with the name {plugin}");
+                return Ok(());
+            }
+            let select = inquire::Select::new("🎚️ Select a plugin:", plugins_select);
+            let plugin = select.prompt()?;
+            let plugin: &HangarProject = plugins
+                .iter()
+                .find(|p| p.name == plugin)
+                .ok_or(Error::PluginNotFound)?;
+            println!("🗂️ Downloading plugin {}...", plugin.name);
+            let author = &plugin.namespace.owner;
+            let slug = &plugin.namespace.slug;
+            println!("📦 Author: {author}");
+            println!("🪪 Slug: {slug}");
+            println!("📁 Category: {}", plugin.category);
+            println!("📩 Downloads: {}", plugin.stats.downloads);
+            println!("👁️ Views: {}", plugin.stats.views);
+            println!("⭐  Stars: {}", plugin.stats.stars);
+            manipulator.download_plugin(author, slug)?;
+            println!("👌 Done!");
         }
-        ServerAction::Optimize { name } => {
-            todo!("Optimize")
-            // let server = config
-            //     .get_server(&name)
-            //     .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
-            // server.optimize(verbose);
-        }
-        ServerAction::Import { location } => {
-            todo!("Import server")
-            // let path = Path::new(&location);
-            // if !path.exists() {
-            //     return Err(Error::ResourceNotFound("Path does not exist".to_string()));
-            // }
-            // println!("📝 Importing servers from {location}...");
-            // for entry in path.read_dir()? {
-            //     let entry = entry?;
-            //     let path = entry.path();
-            //     if !path.is_dir() {
-            //         continue;
-            //     }
-            //     let Ok(server) = Server::from_path(path.to_str().unwrap()) else {
-            //         println!(
-            //             "⚠️ Failed to create server from path {}",
-            //             path.to_str().unwrap()
-            //         );
-            //         return Err(Error::ResourceNotFound(
-            //             "⚠️ Failed to create server from path".to_string(),
-            //         ));
-            //     };
-            //     if config.get_server(&server.server_name).is_some() {
-            //         println!("😒 Skipping {}, it already exists.", server.server_name);
-            //         continue;
-            //     }
-            //     config.add_server(&server, true);
-            // }
-            // confy::store("boxes", None, config).expect("🚨 Config file could not be saved!");
-            // println!("📝 Imported servers from {location}!");
+        ServerPluginAction::Remove { name, plugin } => {
+            let server = config
+                .get_server(&name)
+                .ok_or(Error::ResourceNotFound("Server not found".to_string()))?;
+            let manipulator = Manipulator::new(&server);
+            manipulator.remove_plugin(&plugin)?;
         }
     }
     Ok(())

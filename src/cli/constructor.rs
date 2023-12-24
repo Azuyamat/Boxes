@@ -55,15 +55,22 @@ pub enum ServerAction {
     /// Add a server with the given location
     Add { location: String },
     /// Get plugins for a server with the given name
-    Plugins { name: String },
-    /// Assign an IP to a server with the given name
-    AssignIP { name: String, ip: String },
-    /// Optimize a server with the given name
-    Optimize { name: String },
-    /// Import existing servers from a directory
-    Import { location: String },
+    Plugins {
+        #[command(subcommand)]
+        action: ServerPluginAction
+    },
     /// Remove a server with the given name from the config
     Remove { name: String },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ServerPluginAction {
+    /// List all plugins for a server with the given name
+    List { name: String },
+    /// Add a plugin to a server with the given name
+    Add { name: String, plugin: String },
+    /// Remove a plugin from a server with the given name
+    Remove { name: String, plugin: String },
 }
 
 #[derive(Subcommand, Debug)]

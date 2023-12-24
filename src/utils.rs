@@ -1,7 +1,7 @@
+use std::env::current_dir;
 use crate::error::Error;
 use reqwest::blocking::Response;
 use serde::{Deserialize, Serialize};
-use std::fs;
 use std::fs::File;
 use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
@@ -92,9 +92,10 @@ pub fn read_line(prompt: &str) -> Result<String, Error> {
 }
 
 pub fn canonize(path: &Path) -> Result<PathBuf, Error> {
-    let full_path = fs::canonicalize(path)?;
-    let full_path = full_path.to_str().unwrap().trim_start_matches("\\\\?\\");
-    let full_path = PathBuf::from(full_path);
+    if !path.is_relative() {
+        return Ok(path.to_path_buf());
+    }
+    let full_path = current_dir()?.join(path);
     Ok(full_path)
 }
 
